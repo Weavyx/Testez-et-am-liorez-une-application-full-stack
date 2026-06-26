@@ -44,7 +44,7 @@ export class DetailComponent implements OnInit {
     this.fetchSession();
   }
 
-  public back() {
+  public back(): void {
     window.history.back();
   }
 
@@ -52,7 +52,7 @@ export class DetailComponent implements OnInit {
     this.sessionApiService
       .delete(this.sessionId)
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((_: any) => {
+      .subscribe((_: void) => {
           this.matSnackBar.open('Session deleted !', 'Close', { duration: 3000 });
           this.router.navigate(['sessions']);
         }
