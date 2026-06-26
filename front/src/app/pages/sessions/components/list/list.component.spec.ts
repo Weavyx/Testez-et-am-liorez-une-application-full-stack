@@ -6,6 +6,7 @@ import { expect } from '@jest/globals';
 import { SessionService } from 'src/app/core/service/session.service';
 
 import { ListComponent } from './list.component';
+import {RouterTestingModule} from "@angular/router/testing";
 
 describe('ListComponent', () => {
   let component: ListComponent;
@@ -19,8 +20,7 @@ describe('ListComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ListComponent],
-      imports: [HttpClientModule, MatCardModule, MatIconModule],
+      imports: [HttpClientModule, MatCardModule, MatIconModule,ListComponent,RouterTestingModule ],
       providers: [{ provide: SessionService, useValue: mockSessionService }]
     })
       .compileComponents();

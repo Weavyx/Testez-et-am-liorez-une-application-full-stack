@@ -21,14 +21,13 @@ describe('MeComponent', () => {
   }
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [MeComponent],
       imports: [
         MatSnackBarModule,
         HttpClientModule,
         MatCardModule,
         MatFormFieldModule,
         MatIconModule,
-        MatInputModule
+        MatInputModule,MeComponent
       ],
       providers: [{ provide: SessionService, useValue: mockSessionService }],
     })
