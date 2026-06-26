@@ -27,6 +27,9 @@ public class SessionService {
     }
 
     public void delete(Long id) {
+        if (!this.sessionRepository.existsById(id)) {
+            throw new NotFoundException();
+        }
         this.sessionRepository.deleteById(id);
     }
 
@@ -35,7 +38,7 @@ public class SessionService {
     }
 
     public Session getById(Long id) {
-        return this.sessionRepository.findById(id).orElse(null);
+        return this.sessionRepository.findById(id).orElseThrow(NotFoundException::new);
     }
 
     public Session update(Long id, Session session) {
