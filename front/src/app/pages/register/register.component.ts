@@ -1,4 +1,5 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/service/auth.service';
@@ -12,6 +13,7 @@ import { CommonModule } from "@angular/common";
   styleUrls: ['./register.component.scss']
 })
 export class RegisterComponent {
+  private destroyRef = inject(DestroyRef);
   private authService = inject(AuthService);
   private fb = inject(FormBuilder);
   private router = inject(Router);
@@ -54,11 +56,12 @@ export class RegisterComponent {
 
   public submit(): void {
     const registerRequest = this.form.value as RegisterRequest;
-    this.authService.register(registerRequest).subscribe({
+    this.authService.register(registerRequest)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
         next: (_: void) => this.router.navigate(['/login']),
         error: _ => this.onError = true,
-      }
-    );
+      });
   }
 
 }
