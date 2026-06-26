@@ -27,9 +27,8 @@ describe('DetailComponent', () => {
         RouterTestingModule,
         HttpClientModule,
         MatSnackBarModule,
-        ReactiveFormsModule
+        ReactiveFormsModule,DetailComponent
       ],
-      declarations: [DetailComponent],
       providers: [{ provide: SessionService, useValue: mockSessionService }],
     })
       .compileComponents();
