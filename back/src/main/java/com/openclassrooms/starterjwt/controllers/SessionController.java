@@ -35,13 +35,7 @@ public class SessionController {
 
     @GetMapping("/{id}")
     public ResponseEntity<?> findById(@PathVariable("id") String id) {
-        Session session = this.sessionService.getById(Long.valueOf(id));
-
-        if (session == null) {
-            return ResponseEntity.notFound().build();
-        }
-
-        return ResponseEntity.ok().body(this.sessionMapper.toDto(session));
+        return ResponseEntity.ok().body(this.sessionMapper.toDto(this.sessionService.getById(Long.valueOf(id))));
     }
 
     @GetMapping()
@@ -70,12 +64,6 @@ public class SessionController {
 
     @DeleteMapping("{id}")
     public ResponseEntity<?> save(@PathVariable("id") String id) {
-        Session session = this.sessionService.getById(Long.valueOf(id));
-
-        if (session == null) {
-            return ResponseEntity.notFound().build();
-        }
-
         this.sessionService.delete(Long.parseLong(id));
         return ResponseEntity.ok().build();
     }
