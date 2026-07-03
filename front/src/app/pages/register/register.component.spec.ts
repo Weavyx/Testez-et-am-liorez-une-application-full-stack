@@ -13,6 +13,20 @@ import { AuthService } from '../../core/service/auth.service';
 
 import { RegisterComponent } from './register.component';
 
+/**
+ * RegisterComponent — page "Register"
+ *
+ * Cas du testing plan couverts :
+ *   - Register : inscription réussie et redirection vers /login
+ *   - Register : échec d'inscription, message d'erreur affiché
+ *   - Register : champ obligatoire manquant → bouton submit désactivé
+ *
+ * Répartition des tests (méthodologie stricte du projet) :
+ *   - INTÉGRATION = le test lit lui-même le DOM réellement rendu et/ou
+ *     vérifie une requête HTTP réelle via HttpTestingController.
+ *   - UNITAIRE = tout le reste, même si TestBed/fixture servent de
+ *     plomberie (instanciation) sans assertion sur ce qu'ils produisent.
+ */
 describe('RegisterComponent', () => {
   let component: RegisterComponent;
   let fixture: ComponentFixture<RegisterComponent>;
@@ -41,60 +55,64 @@ describe('RegisterComponent', () => {
     fixture.detectChanges();
   });
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
+  describe('rendu (intégration DOM)', () => {
+    it('should set onError to true when registration fails', () => {
+      jest.spyOn(authService, 'register').mockReturnValue(throwError(() => new Error('Email already used')));
+
+      component.form.setValue({
+        email: 'user@test.com',
+        firstName: 'John',
+        lastName: 'Doe',
+        password: 'password'
+      });
+      component.submit();
+      fixture.detectChanges();
+
+      expect(component.onError).toBe(true);
+      const errorElement: HTMLElement = fixture.nativeElement.querySelector('.error');
+      expect(errorElement).toBeTruthy();
+    });
+
+    it('should disable the submit button when a required field is missing', () => {
+      component.form.setValue({
+        email: '',
+        firstName: 'John',
+        lastName: 'Doe',
+        password: 'password'
+      });
+      fixture.detectChanges();
+
+      const submitButton: HTMLButtonElement = fixture.nativeElement.querySelector('button[type="submit"]');
+      expect(component.form.invalid).toBe(true);
+      expect(submitButton.disabled).toBe(true);
+    });
   });
 
-  it('should register and navigate to /login on successful submit', () => {
-    jest.spyOn(authService, 'register').mockReturnValue(of(undefined));
-    const navigateSpy = jest.spyOn(router, 'navigate');
-
-    component.form.setValue({
-      email: 'user@test.com',
-      firstName: 'John',
-      lastName: 'Doe',
-      password: 'password'
+  describe('logique isolée (unitaire)', () => {
+    it('should create', () => {
+      expect(component).toBeTruthy();
     });
-    component.submit();
 
-    expect(authService.register).toHaveBeenCalledWith({
-      email: 'user@test.com',
-      firstName: 'John',
-      lastName: 'Doe',
-      password: 'password'
+    it('should register and navigate to /login on successful submit', () => {
+      jest.spyOn(authService, 'register').mockReturnValue(of(undefined));
+      const navigateSpy = jest.spyOn(router, 'navigate');
+
+      component.form.setValue({
+        email: 'user@test.com',
+        firstName: 'John',
+        lastName: 'Doe',
+        password: 'password'
+      });
+      component.submit();
+
+      expect(authService.register).toHaveBeenCalledWith({
+        email: 'user@test.com',
+        firstName: 'John',
+        lastName: 'Doe',
+        password: 'password'
+      });
+      expect(navigateSpy).toHaveBeenCalledWith(['/login']);
+      expect(component.onError).toBe(false);
     });
-    expect(navigateSpy).toHaveBeenCalledWith(['/login']);
-    expect(component.onError).toBe(false);
-  });
-
-  it('should set onError to true when registration fails', () => {
-    jest.spyOn(authService, 'register').mockReturnValue(throwError(() => new Error('Email already used')));
-
-    component.form.setValue({
-      email: 'user@test.com',
-      firstName: 'John',
-      lastName: 'Doe',
-      password: 'password'
-    });
-    component.submit();
-    fixture.detectChanges();
-
-    expect(component.onError).toBe(true);
-    const errorElement: HTMLElement = fixture.nativeElement.querySelector('.error');
-    expect(errorElement).toBeTruthy();
-  });
-
-  it('should disable the submit button when a required field is missing', () => {
-    component.form.setValue({
-      email: '',
-      firstName: 'John',
-      lastName: 'Doe',
-      password: 'password'
-    });
-    fixture.detectChanges();
-
-    const submitButton: HTMLButtonElement = fixture.nativeElement.querySelector('button[type="submit"]');
-    expect(component.form.invalid).toBe(true);
-    expect(submitButton.disabled).toBe(true);
   });
 });
