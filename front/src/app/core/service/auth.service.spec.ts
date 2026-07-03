@@ -7,6 +7,21 @@ import { SessionInformation } from '../models/sessionInformation.interface';
 
 import { AuthService } from './auth.service';
 
+/**
+ * AuthService — appels HTTP d'authentification (login / register)
+ *
+ * Cas du testing plan couverts :
+ *   - Login : requête POST vers /api/auth/login avec les identifiants
+ *   - Register : requête POST vers /api/auth/register avec les données d'inscription
+ *
+ * Répartition des tests (méthodologie stricte du projet) :
+ *   - INTÉGRATION = le test lit lui-même le DOM réellement rendu et/ou
+ *     vérifie une requête HTTP réelle via HttpTestingController.
+ *   - UNITAIRE = tout le reste, même si TestBed sert de simple plomberie.
+ *
+ * Service pur, sans composant/DOM : tous les tests sont unitaires par
+ * construction ici, pas de regroupement rendu/logique supplémentaire.
+ */
 describe('AuthService', () => {
   let service: AuthService;
   let httpMock: HttpTestingController;
