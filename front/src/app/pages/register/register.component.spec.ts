@@ -1,4 +1,4 @@
-import { HttpClientModule } from '@angular/common/http';
+import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -35,10 +35,9 @@ describe('RegisterComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      providers: [provideRouter([])],
+      providers: [provideRouter([]), provideHttpClient(withInterceptorsFromDi())],
       imports: [
         BrowserAnimationsModule,
-        HttpClientModule,
         ReactiveFormsModule,
         MatCardModule,
         MatFormFieldModule,

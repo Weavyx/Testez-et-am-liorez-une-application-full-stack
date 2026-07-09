@@ -1,4 +1,5 @@
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
+import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -51,9 +52,11 @@ describe('ListComponent', () => {
 
   const setup = async (sessionService: unknown): Promise<void> => {
     await TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule, MatCardModule, MatIconModule, ListComponent],
+      imports: [MatCardModule, MatIconModule, ListComponent],
       providers: [
         provideRouter([]),
+        provideHttpClient(withInterceptorsFromDi()),
+        provideHttpClientTesting(),
         { provide: SessionService, useValue: sessionService }
       ]
     }).compileComponents();

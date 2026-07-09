@@ -1,4 +1,5 @@
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
+import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -48,7 +49,6 @@ describe('FormComponent', () => {
 
   const sharedImports = [
     RouterTestingModule,
-    HttpClientTestingModule,
     MatCardModule,
     MatIconModule,
     MatFormFieldModule,
@@ -58,6 +58,11 @@ describe('FormComponent', () => {
     MatSelectModule,
     BrowserAnimationsModule,
     FormComponent
+  ];
+
+  const sharedProviders = [
+    provideHttpClient(withInterceptorsFromDi()),
+    provideHttpClientTesting()
   ];
 
   // ─── Create mode ────────────────────────────────────────────────────────────
@@ -76,6 +81,7 @@ describe('FormComponent', () => {
       await TestBed.configureTestingModule({
         imports: sharedImports,
         providers: [
+          ...sharedProviders,
           { provide: SessionService, useValue: { sessionInformation: { admin: true } } },
           { provide: Router, useValue: mockRouter },
           { provide: ActivatedRoute, useValue: mockActivatedRoute },
@@ -162,6 +168,7 @@ describe('FormComponent', () => {
       await TestBed.configureTestingModule({
         imports: sharedImports,
         providers: [
+          ...sharedProviders,
           { provide: SessionService, useValue: { sessionInformation: { admin: false } } },
           { provide: Router, useValue: mockRouter },
           { provide: ActivatedRoute, useValue: mockActivatedRoute },
@@ -200,6 +207,7 @@ describe('FormComponent', () => {
       await TestBed.configureTestingModule({
         imports: sharedImports,
         providers: [
+          ...sharedProviders,
           { provide: SessionService, useValue: { sessionInformation: { admin: true } } },
           { provide: Router, useValue: mockRouter },
           { provide: ActivatedRoute, useValue: mockActivatedRoute },

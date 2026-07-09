@@ -1,4 +1,5 @@
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
+import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
@@ -32,13 +33,14 @@ const mockTeacher: Teacher = {
 function configureTestBed(sessionInformation: { admin: boolean; id: number }) {
   return TestBed.configureTestingModule({
     imports: [
-      HttpClientTestingModule,
       MatSnackBarModule,
       ReactiveFormsModule,
       DetailComponent
     ],
     providers: [
       provideRouter([]),
+      provideHttpClient(withInterceptorsFromDi()),
+      provideHttpClientTesting(),
       { provide: SessionService, useValue: { sessionInformation } },
       { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: '1' }) } } }
     ],

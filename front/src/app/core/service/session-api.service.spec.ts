@@ -1,4 +1,4 @@
-import { HttpClientModule } from '@angular/common/http';
+import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { expect } from '@jest/globals';
 
@@ -24,8 +24,8 @@ describe('SessionsService', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports:[
-        HttpClientModule
+      providers:[
+        provideHttpClient(withInterceptorsFromDi())
       ]
     });
     service = TestBed.inject(SessionApiService);
