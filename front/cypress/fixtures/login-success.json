@@ -1,0 +1,9 @@
+{
+  "token": "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ5b2dhQHN0dWRpby5jb20ifQ.mocked-signature-for-e2e-tests",
+  "type": "Bearer",
+  "id": 1,
+  "username": "yoga@studio.com",
+  "firstName": "Admin",
+  "lastName": "Admin",
+  "admin": true
+}
