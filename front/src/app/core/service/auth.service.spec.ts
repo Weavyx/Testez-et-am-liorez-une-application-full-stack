@@ -20,8 +20,9 @@ import { AuthService } from './auth.service';
  *     vérifie une requête HTTP réelle via HttpTestingController.
  *   - UNITAIRE = tout le reste, même si TestBed sert de simple plomberie.
  *
- * Service pur, sans composant/DOM : tous les tests sont unitaires par
- * construction ici, pas de regroupement rendu/logique supplémentaire.
+ * Service pur, sans DOM : les tests ci-dessous vérifient le contrat HTTP réel
+ * (URL, verbe, payload) via HttpTestingController → classés INTÉGRATION,
+ * à l'exception de l'instanciation (should be created), qui reste unitaire.
  */
 describe('AuthService', () => {
   let service: AuthService;
@@ -47,43 +48,49 @@ describe('AuthService', () => {
     expect(service).toBeTruthy();
   });
 
-  it('should send a POST request to api/auth/login with the credentials', () => {
-    const loginRequest: LoginRequest = { email: 'user@test.com', password: 'password' };
-    const sessionInfo: SessionInformation = {
-      token: 'token',
-      type: 'Bearer',
-      id: 1,
-      username: 'user@test.com',
-      firstName: 'John',
-      lastName: 'Doe',
-      admin: false
-    };
+  describe('login', () => {
+    // Intégration : vérifie la requête HTTP réelle (verbe + URL + body) et la réponse transmise
+    it('should send a POST request to api/auth/login with the credentials', () => {
+      const loginRequest: LoginRequest = { email: 'user@test.com', password: 'password' };
+      const sessionInfo: SessionInformation = {
+        token: 'token',
+        type: 'Bearer',
+        id: 1,
+        username: 'user@test.com',
+        firstName: 'John',
+        lastName: 'Doe',
+        admin: false
+      };
 
-    service.login(loginRequest).subscribe((response) => {
-      expect(response).toEqual(sessionInfo);
+      service.login(loginRequest).subscribe((response) => {
+        expect(response).toEqual(sessionInfo);
+      });
+
+      const req = httpMock.expectOne('/api/auth/login');
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual(loginRequest);
+      req.flush(sessionInfo);
     });
-
-    const req = httpMock.expectOne('/api/auth/login');
-    expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual(loginRequest);
-    req.flush(sessionInfo);
   });
 
-  it('should send a POST request to api/auth/register with the registration data', () => {
-    const registerRequest: RegisterRequest = {
-      email: 'user@test.com',
-      firstName: 'John',
-      lastName: 'Doe',
-      password: 'password'
-    };
+  describe('register', () => {
+    // Intégration : vérifie la requête HTTP réelle (verbe + URL + body) sans payload de retour
+    it('should send a POST request to api/auth/register with the registration data', () => {
+      const registerRequest: RegisterRequest = {
+        email: 'user@test.com',
+        firstName: 'John',
+        lastName: 'Doe',
+        password: 'password'
+      };
 
-    service.register(registerRequest).subscribe((response) => {
-      expect(response).toBeUndefined();
+      service.register(registerRequest).subscribe((response) => {
+        expect(response).toBeUndefined();
+      });
+
+      const req = httpMock.expectOne('/api/auth/register');
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual(registerRequest);
+      req.flush(null);
     });
-
-    const req = httpMock.expectOne('/api/auth/register');
-    expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual(registerRequest);
-    req.flush(null);
   });
 });
