@@ -3,3 +3,5 @@
 CLAUDE.md
 AUDIT_REPO.md
 AUDIT_ONPUSH_INJECT.md
+front/.nyc_output/
+front/cypress/downloads/
