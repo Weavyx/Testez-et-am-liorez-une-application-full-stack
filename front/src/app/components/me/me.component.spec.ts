@@ -1,4 +1,4 @@
-import { HttpClientModule } from '@angular/common/http';
+import { provideHttpClient, withInterceptorsFromDi} from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -6,7 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { provideRouter, Router } from '@angular/router';
-import { expect } from '@jest/globals';
+import { expect, jest } from '@jest/globals';
 import { of } from 'rxjs';
 import { User } from 'src/app/core/models/user.interface';
 import { SessionService } from 'src/app/core/service/session.service';
@@ -60,7 +60,6 @@ describe('MeComponent', () => {
     await TestBed.configureTestingModule({
         imports: [
           MatSnackBarModule,
-          HttpClientModule,
           MatCardModule,
           MatFormFieldModule,
           MatIconModule,
@@ -69,6 +68,7 @@ describe('MeComponent', () => {
         ],
         providers: [
           provideRouter([]),
+          provideHttpClient(withInterceptorsFromDi()),
           { provide: SessionService, useValue: mockSessionService }
         ],
       })
