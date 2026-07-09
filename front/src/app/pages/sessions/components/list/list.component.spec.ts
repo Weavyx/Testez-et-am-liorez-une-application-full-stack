@@ -16,6 +16,9 @@ import { ListComponent } from './list.component';
  * Cas du testing plan couverts :
  *   - Sessions list : affichage des sessions renvoyées par l'API
  *   - Sessions list : visibilité du bouton "Create" selon le rôle (admin/non-admin)
+ *   - Sessions list : visibilité du bouton "Detail" pour un utilisateur non-admin
+ *     (comportement volontaire, cf. commentaire sur le test dédié — écart
+ *     documenté avec le libellé du testing plan officiel)
  *
  * Répartition des tests (méthodologie stricte du projet) :
  *   - INTÉGRATION = le test lit lui-même le DOM réellement rendu et/ou
@@ -107,6 +110,28 @@ describe('ListComponent', () => {
 
       const text: string = fixture.nativeElement.textContent;
       expect(text).not.toContain('Create');
+    });
+
+    // Le testing plan officiel énonce (à tort, de façon imprécise) que les
+    // boutons "Create" et "Detail" seraient tous deux conditionnés au rôle
+    // admin. Ce n'est vrai que pour "Create" : dans list.component.html, le
+    // bouton "Detail" est placé hors de tout @if et est donc rendu pour
+    // chaque session, quel que soit le rôle. Ce n'est pas un oubli : l'écran
+    // Detail porte aussi le flux Participate/Do not participate, que tout
+    // utilisateur non-admin doit pouvoir déclencher. Ce test documente ce
+    // comportement volontaire (et l'écart avec le libellé du plan), il ne
+    // doit pas être "corrigé" pour masquer Detail aux non-admins.
+    it('should display the Detail button even for a non-admin user (intentional: Detail also drives the participate/unparticipate flow)', async () => {
+      await setup(mockNonAdminSessionService);
+      fixture.detectChanges();
+
+      const req = httpMock.expectOne('api/session');
+      req.flush(mockSessions);
+      fixture.detectChanges();
+
+      const detailButton = Array.from(fixture.nativeElement.querySelectorAll('button'))
+        .find((btn: any) => btn.textContent?.includes('Detail'));
+      expect(detailButton).toBeDefined();
     });
   });
 
