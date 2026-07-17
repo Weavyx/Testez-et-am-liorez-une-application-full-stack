@@ -14,12 +14,15 @@ import { User } from '../models/user.interface';
  *   - Suppression du compte utilisateur (delete)
  *
  * Répartition des tests (méthodologie stricte du projet) :
- *   - INTÉGRATION = le test lit lui-même le DOM réellement rendu et/ou
- *     vérifie une requête HTTP réelle via HttpTestingController.
- *   - UNITAIRE = tout le reste, même si TestBed sert de simple plomberie.
+ *   - INTÉGRATION = le test lit lui-même le DOM réellement rendu.
+ *   - UNITAIRE = tout le reste, y compris les tests qui vérifient le contrat
+ *     HTTP réel (URL/verbe/payload) via HttpTestingController — ce dernier
+ *     mocke le backend, aucun réseau ni serveur réel n'est impliqué — même
+ *     si TestBed sert de simple plomberie.
  *
- * Service pur, sans DOM : les tests ci-dessous vérifient le contrat HTTP réel
- * (URL, verbe, payload) via HttpTestingController → classés INTÉGRATION.
+ * Service pur, sans DOM : tous les tests ci-dessous sont donc UNITAIRES,
+ * y compris ceux qui vérifient le contrat HTTP (URL, verbe, payload) via
+ * HttpTestingController.
  */
 describe('UserService', () => {
   let service: UserService;
@@ -55,7 +58,7 @@ describe('UserService', () => {
   });
 
   describe('getById', () => {
-    // Intégration : vérifie la requête HTTP réelle (verbe + URL) et la réponse transmise
+    // Unitaire : vérifie le contrat HTTP mocké (verbe + URL) et la réponse transmise
     it('should send a GET request to api/user/:id and return the user', () => {
       service.getById('1').subscribe((user) => {
         expect(user).toEqual(mockUser);
@@ -68,7 +71,7 @@ describe('UserService', () => {
   });
 
   describe('delete', () => {
-    // Intégration : vérifie la requête HTTP réelle (verbe + URL) sans payload de retour
+    // Unitaire : vérifie le contrat HTTP mocké (verbe + URL) sans payload de retour
     it('should send a DELETE request to api/user/:id', () => {
       service.delete('1').subscribe((response) => {
         expect(response).toBeUndefined();

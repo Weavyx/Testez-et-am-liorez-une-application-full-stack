@@ -56,10 +56,12 @@ function configureTestBed(sessionInformation: { admin: boolean; id: number }) {
  *   - Session detail : actions non-admin (Participate / UnParticipate)
  *
  * Répartition des tests (méthodologie stricte du projet) :
- *   - INTÉGRATION = le test lit lui-même le DOM réellement rendu et/ou
- *     vérifie une requête HTTP réelle via HttpTestingController.
- *   - UNITAIRE = tout le reste, même si TestBed/fixture servent de
- *     plomberie (instanciation) sans assertion sur ce qu'ils produisent.
+ *   - INTÉGRATION = le test lit lui-même le DOM réellement rendu.
+ *   - UNITAIRE = tout le reste, y compris les tests qui vérifient le contrat
+ *     HTTP réel (URL/verbe/payload) via HttpTestingController — ce dernier
+ *     mocke le backend, aucun réseau ni serveur réel n'est impliqué — même
+ *     si TestBed/fixture servent de plomberie (instanciation) sans
+ *     assertion sur ce qu'ils produisent.
  *
  * La structure fonctionnelle existante (as an admin user / as a non-admin
  * user who has(n't) joined) est conservée ; le classement
@@ -117,19 +119,6 @@ describe('DetailComponent', () => {
           .find(btn => btn.textContent?.includes('Participate'));
         expect(participateButton).toBeUndefined();
       });
-
-      it('should delete the session, notify the user and navigate to /sessions', () => {
-        const snackBarSpy = jest.spyOn(MatSnackBar.prototype, 'open')
-          .mockReturnValue({} as ReturnType<MatSnackBar['open']>);
-
-        component.delete();
-
-        const deleteReq = httpMock.expectOne({ url: 'api/session/1', method: 'DELETE' });
-        deleteReq.flush(null);
-
-        expect(snackBarSpy).toHaveBeenCalledWith('Session deleted !', 'Close', { duration: 3000 });
-        expect(router.navigate).toHaveBeenCalledWith(['sessions']);
-      });
     });
 
     describe('logique isolée (unitaire)', () => {
@@ -142,6 +131,21 @@ describe('DetailComponent', () => {
         component.back();
         expect(historySpy).toHaveBeenCalled();
         historySpy.mockRestore();
+      });
+
+      // Unitaire : ne lit pas le DOM, vérifie seulement le contrat HTTP
+      // mocké (verbe + URL) et les appels à la snackbar/router.
+      it('should delete the session, notify the user and navigate to /sessions', () => {
+        const snackBarSpy = jest.spyOn(MatSnackBar.prototype, 'open')
+          .mockReturnValue({} as ReturnType<MatSnackBar['open']>);
+
+        component.delete();
+
+        const deleteReq = httpMock.expectOne({ url: 'api/session/1', method: 'DELETE' });
+        deleteReq.flush(null);
+
+        expect(snackBarSpy).toHaveBeenCalledWith('Session deleted !', 'Close', { duration: 3000 });
+        expect(router.navigate).toHaveBeenCalledWith(['sessions']);
       });
     });
   });
@@ -184,7 +188,11 @@ describe('DetailComponent', () => {
           .find(btn => btn.textContent?.includes('Participate'));
         expect(participateButton).toBeDefined();
       });
+    });
 
+    describe('logique isolée (unitaire)', () => {
+      // Unitaire : ne lit pas le DOM, vérifie seulement le contrat HTTP
+      // mocké (verbe + URL) et l'état interne du composant.
       it('should call the participate API with the session and user id, then reload the session', () => {
         component.participate();
 
@@ -232,7 +240,11 @@ describe('DetailComponent', () => {
           .find(btn => btn.textContent?.includes('Do not participate'));
         expect(unParticipateButton).toBeDefined();
       });
+    });
 
+    describe('logique isolée (unitaire)', () => {
+      // Unitaire : ne lit pas le DOM, vérifie seulement le contrat HTTP
+      // mocké (verbe + URL) et l'état interne du composant.
       it('should call the unParticipate API with the session and user id, then reload the session', () => {
         component.unParticipate();
 

@@ -16,13 +16,15 @@ import { AuthService } from './auth.service';
  *   - Register : requête POST vers /api/auth/register avec les données d'inscription
  *
  * Répartition des tests (méthodologie stricte du projet) :
- *   - INTÉGRATION = le test lit lui-même le DOM réellement rendu et/ou
- *     vérifie une requête HTTP réelle via HttpTestingController.
- *   - UNITAIRE = tout le reste, même si TestBed sert de simple plomberie.
+ *   - INTÉGRATION = le test lit lui-même le DOM réellement rendu.
+ *   - UNITAIRE = tout le reste, y compris les tests qui vérifient le contrat
+ *     HTTP réel (URL/verbe/payload) via HttpTestingController — ce dernier
+ *     mocke le backend, aucun réseau ni serveur réel n'est impliqué — même
+ *     si TestBed sert de simple plomberie.
  *
- * Service pur, sans DOM : les tests ci-dessous vérifient le contrat HTTP réel
- * (URL, verbe, payload) via HttpTestingController → classés INTÉGRATION,
- * à l'exception de l'instanciation (should be created), qui reste unitaire.
+ * Service pur, sans DOM : tous les tests ci-dessous sont donc UNITAIRES,
+ * y compris ceux qui vérifient le contrat HTTP (URL, verbe, payload) via
+ * HttpTestingController.
  */
 describe('AuthService', () => {
   let service: AuthService;
@@ -49,7 +51,7 @@ describe('AuthService', () => {
   });
 
   describe('login', () => {
-    // Intégration : vérifie la requête HTTP réelle (verbe + URL + body) et la réponse transmise
+    // Unitaire : vérifie le contrat HTTP mocké (verbe + URL + body) et la réponse transmise
     it('should send a POST request to api/auth/login with the credentials', () => {
       const loginRequest: LoginRequest = { email: 'user@test.com', password: 'password' };
       const sessionInfo: SessionInformation = {
@@ -74,7 +76,7 @@ describe('AuthService', () => {
   });
 
   describe('register', () => {
-    // Intégration : vérifie la requête HTTP réelle (verbe + URL + body) sans payload de retour
+    // Unitaire : vérifie le contrat HTTP mocké (verbe + URL + body) sans payload de retour
     it('should send a POST request to api/auth/register with the registration data', () => {
       const registerRequest: RegisterRequest = {
         email: 'user@test.com',

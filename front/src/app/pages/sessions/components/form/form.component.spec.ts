@@ -28,10 +28,12 @@ import { FormComponent } from './form.component';
  *   - Session form : protection de la route pour un utilisateur non-admin
  *
  * Répartition des tests (méthodologie stricte du projet) :
- *   - INTÉGRATION = le test lit lui-même le DOM réellement rendu et/ou
- *     vérifie une requête HTTP réelle via HttpTestingController.
- *   - UNITAIRE = tout le reste, même si TestBed/fixture servent de
- *     plomberie (instanciation) sans assertion sur ce qu'ils produisent.
+ *   - INTÉGRATION = le test lit lui-même le DOM réellement rendu.
+ *   - UNITAIRE = tout le reste, y compris les tests qui vérifient le contrat
+ *     HTTP réel (URL/verbe/payload) via HttpTestingController — ce dernier
+ *     mocke le backend, aucun réseau ni serveur réel n'est impliqué — même
+ *     si TestBed/fixture servent de plomberie (instanciation) sans
+ *     assertion sur ce qu'ils produisent.
  *
  * La structure fonctionnelle existante (Create mode / Non-admin user /
  * Edit mode) est conservée ; le classement unitaire/intégration est
@@ -116,23 +118,6 @@ describe('FormComponent', () => {
         const button: HTMLButtonElement = fixture.nativeElement.querySelector('button[type="submit"]');
         expect(button.disabled).toBe(false);
       });
-
-      it('should call the create API and navigate to sessions on submit', () => {
-        component.sessionForm?.setValue({
-          name: 'New Session',
-          date: '2025-12-01',
-          teacher_id: 1,
-          description: 'A test session'
-        });
-
-        component.submit();
-
-        const req = httpMock.expectOne('api/session');
-        expect(req.request.method).toBe('POST');
-        req.flush(mockSession);
-
-        expect(mockRouter.navigate).toHaveBeenCalledWith(['sessions']);
-      });
     });
 
     describe('logique isolée (unitaire)', () => {
@@ -149,6 +134,25 @@ describe('FormComponent', () => {
         expect(component.sessionForm?.get('date')?.value).toBe('');
         expect(component.sessionForm?.get('teacher_id')?.value).toBe('');
         expect(component.sessionForm?.get('description')?.value).toBe('');
+      });
+
+      // Unitaire : ne lit pas le DOM, vérifie seulement le contrat HTTP
+      // mocké (verbe + URL) et l'appel à router.navigate.
+      it('should call the create API and navigate to sessions on submit', () => {
+        component.sessionForm?.setValue({
+          name: 'New Session',
+          date: '2025-12-01',
+          teacher_id: 1,
+          description: 'A test session'
+        });
+
+        component.submit();
+
+        const req = httpMock.expectOne('api/session');
+        expect(req.request.method).toBe('POST');
+        req.flush(mockSession);
+
+        expect(mockRouter.navigate).toHaveBeenCalledWith(['sessions']);
       });
     });
   });
@@ -231,16 +235,6 @@ describe('FormComponent', () => {
     afterEach(() => httpMock.verify());
 
     describe('rendu (intégration DOM)', () => {
-      it('should call the update API and navigate to sessions on submit', () => {
-        component.submit();
-
-        const req = httpMock.expectOne('api/session/1');
-        expect(req.request.method).toBe('PUT');
-        req.flush(mockSession);
-
-        expect(mockRouter.navigate).toHaveBeenCalledWith(['sessions']);
-      });
-
       it('should disable the submit button when a required field is missing', () => {
         component.sessionForm?.get('name')?.setValue('');
         fixture.detectChanges();
@@ -260,6 +254,18 @@ describe('FormComponent', () => {
         expect(component.sessionForm?.get('name')?.value).toBe('Yoga Morning');
         expect(component.sessionForm?.get('teacher_id')?.value).toBe(2);
         expect(component.sessionForm?.get('description')?.value).toBe('Morning yoga session');
+      });
+
+      // Unitaire : ne lit pas le DOM, vérifie seulement le contrat HTTP
+      // mocké (verbe + URL) et l'appel à router.navigate.
+      it('should call the update API and navigate to sessions on submit', () => {
+        component.submit();
+
+        const req = httpMock.expectOne('api/session/1');
+        expect(req.request.method).toBe('PUT');
+        req.flush(mockSession);
+
+        expect(mockRouter.navigate).toHaveBeenCalledWith(['sessions']);
       });
     });
   });
