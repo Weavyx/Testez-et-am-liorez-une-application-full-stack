@@ -188,6 +188,20 @@ describe('FormComponent', () => {
 
     afterEach(() => httpMock.verify());
 
+    describe('rendu (intégration DOM)', () => {
+      // Documente un comportement réel, pas un bug à corriger : router.navigate()
+      // (form.component.ts:36) ne bloque pas l'exécution synchrone de ngOnInit, donc
+      // initForm() s'exécute quand même pour un non-admin et le formulaire reste
+      // rendu dans le DOM tant que la navigation asynchrone vers /sessions n'a pas
+      // été résolue par le vrai routeur.
+      it('should still render the form fields in the DOM even though a non-admin redirect was triggered', () => {
+        fixture.detectChanges();
+        const compiled = fixture.nativeElement as HTMLElement;
+        expect(compiled.querySelector('input[formControlName="name"]')).toBeTruthy();
+        expect(compiled.querySelector('textarea[formControlName="description"]')).toBeTruthy();
+      });
+    });
+
     describe('logique isolée (unitaire)', () => {
       it('should redirect a non-admin user to /sessions on init', () => {
         expect(mockRouter.navigate).toHaveBeenCalledWith(['/sessions']);

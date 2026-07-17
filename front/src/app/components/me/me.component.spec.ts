@@ -101,6 +101,17 @@ describe('MeComponent', () => {
       expect(text).toContain('DOE');
       expect(text).toContain(mockUser.email);
     });
+
+    it('should show "You are admin" and hide the Delete account button when the displayed user is admin', () => {
+      jest.spyOn(userService, 'getById').mockReturnValue(of({ ...mockUser, admin: true }));
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.textContent).toContain('You are admin');
+      const deleteButton = Array.from(compiled.querySelectorAll('button'))
+        .find((btn) => btn.textContent?.includes('Delete'));
+      expect(deleteButton).toBeUndefined();
+    });
   });
 
   describe('logique isolée (unitaire)', () => {

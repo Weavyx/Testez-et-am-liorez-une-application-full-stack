@@ -188,6 +188,29 @@ describe('DetailComponent', () => {
           .find(btn => btn.textContent?.includes('Participate'));
         expect(participateButton).toBeDefined();
       });
+
+      it('should toggle the DOM to "Do not participate" and update the attendee count when the Participate button is clicked', () => {
+        const compiled = fixture.nativeElement as HTMLElement;
+        const participateButton = Array.from(compiled.querySelectorAll('button'))
+          .find(btn => btn.textContent?.includes('Participate')) as HTMLButtonElement;
+        expect(participateButton).toBeDefined();
+
+        participateButton.click();
+
+        const participateReq = httpMock.expectOne({ url: 'api/session/1/participate/1', method: 'POST' });
+        participateReq.flush(null);
+
+        const updatedSession: Session = { ...mockSession, users: [1, 2] };
+        httpMock.expectOne({ url: 'api/session/1', method: 'GET' }).flush(updatedSession);
+        httpMock.expectOne({ url: 'api/teacher/1', method: 'GET' }).flush(mockTeacher);
+        fixture.detectChanges();
+
+        const refreshed = fixture.nativeElement as HTMLElement;
+        const buttons = Array.from(refreshed.querySelectorAll('button'));
+        expect(buttons.find(btn => btn.textContent?.includes('Do not participate'))).toBeDefined();
+        expect(buttons.find(btn => btn.textContent?.includes('Participate'))).toBeUndefined();
+        expect(refreshed.textContent).toContain('2 attendees');
+      });
     });
 
     describe('logique isolée (unitaire)', () => {
@@ -239,6 +262,29 @@ describe('DetailComponent', () => {
         const unParticipateButton = Array.from(compiled.querySelectorAll('button'))
           .find(btn => btn.textContent?.includes('Do not participate'));
         expect(unParticipateButton).toBeDefined();
+      });
+
+      it('should toggle the DOM to "Participate" and update the attendee count when the Do not participate button is clicked', () => {
+        const compiled = fixture.nativeElement as HTMLElement;
+        const unParticipateButton = Array.from(compiled.querySelectorAll('button'))
+          .find(btn => btn.textContent?.includes('Do not participate')) as HTMLButtonElement;
+        expect(unParticipateButton).toBeDefined();
+
+        unParticipateButton.click();
+
+        const unParticipateReq = httpMock.expectOne({ url: 'api/session/1/participate/1', method: 'DELETE' });
+        unParticipateReq.flush(null);
+
+        const updatedSession: Session = { ...mockSession, users: [] };
+        httpMock.expectOne({ url: 'api/session/1', method: 'GET' }).flush(updatedSession);
+        httpMock.expectOne({ url: 'api/teacher/1', method: 'GET' }).flush(mockTeacher);
+        fixture.detectChanges();
+
+        const refreshed = fixture.nativeElement as HTMLElement;
+        const buttons = Array.from(refreshed.querySelectorAll('button'));
+        expect(buttons.find(btn => btn.textContent?.includes('Participate'))).toBeDefined();
+        expect(buttons.find(btn => btn.textContent?.includes('Do not participate'))).toBeUndefined();
+        expect(refreshed.textContent).toContain('0 attendees');
       });
     });
 

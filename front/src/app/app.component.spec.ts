@@ -72,6 +72,20 @@ describe('AppComponent', () => {
   });
 
   describe('rendu (intégration DOM)', () => {
+    it('should display Login/Register links (not Sessions/Account/Logout) when not logged in', () => {
+      const fixture = TestBed.createComponent(AppComponent);
+      fixture.detectChanges();
+
+      const nativeElement = fixture.nativeElement as HTMLElement;
+      const links = Array.from(nativeElement.querySelectorAll('.link')).map((el) => el.textContent?.trim());
+
+      expect(links).toContain('Login');
+      expect(links).toContain('Register');
+      expect(links).not.toContain('Sessions');
+      expect(links).not.toContain('Account');
+      expect(links).not.toContain('Logout');
+    });
+
     it('should log out and navigate to "/" when the Logout link is clicked', () => {
       const sessionService = TestBed.inject(SessionService);
       const router = TestBed.inject(Router);
