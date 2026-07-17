@@ -98,7 +98,8 @@
         "serve-coverage": {
           "builder": "@angular-builders/custom-webpack:dev-server",
           "options": {
-            "buildTarget": "yoga:build:e2e"
+            "buildTarget": "yoga:build:e2e",
+            "proxyConfig": "proxy.conf.json"
           }
         },
         "extract-i18n": {
