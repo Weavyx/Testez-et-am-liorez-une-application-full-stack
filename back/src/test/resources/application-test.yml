@@ -5,8 +5,14 @@
 oc:
   app:
     jwtExpirationMs: 86400000
-    # Secret dédié aux tests uniquement, ne doit jamais être utilisé en dev/prod.
-    jwtSecret: integration-test-only-secret-do-not-use-in-production
+    # Secret volontairement en clair et commité : il ne protège que des JWT
+    # générés et validés au sein de la même exécution de test, sur une base
+    # Testcontainers jetée à la fin du build. Sans valeur en dehors de CI/CI
+    # locale : ne JAMAIS le réutiliser en dev/staging/prod (voir TOKEN_SECRET
+    # dans .env pour le secret réel, qui doit lui rester hors du repo).
+    # JwtUtils#generateJwtToken le décode en Base64 puis exige >= 512 bits pour HS512 :
+    # doit rester une chaîne Base64 valide (alphabet standard) d'au moins 64 octets décodés.
+    jwtSecret: YYexzxisawYoUVKeTed4fwqYEMpXAdVpRcBvM3uNGSfXe0FWQxGKJUmqvpPnooe+1lphKR8TRuGK3DFszHMzCQ==
 
 spring:
   jpa:
