@@ -1,4 +1,5 @@
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
+import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -17,6 +18,27 @@ import { SessionService } from 'src/app/core/service/session.service';
 
 import { FormComponent } from './form.component';
 
+/**
+ * FormComponent — page "Create/Update session" (admin only)
+ *
+ * Cas du testing plan couverts :
+ *   - Session form : création d'une session et redirection
+ *   - Session form : mise à jour d'une session existante et redirection
+ *   - Session form : validation du formulaire (bouton submit activé/désactivé)
+ *   - Session form : protection de la route pour un utilisateur non-admin
+ *
+ * Répartition des tests (méthodologie stricte du projet) :
+ *   - INTÉGRATION = le test lit lui-même le DOM réellement rendu.
+ *   - UNITAIRE = tout le reste, y compris les tests qui vérifient le contrat
+ *     HTTP réel (URL/verbe/payload) via HttpTestingController — ce dernier
+ *     mocke le backend, aucun réseau ni serveur réel n'est impliqué — même
+ *     si TestBed/fixture servent de plomberie (instanciation) sans
+ *     assertion sur ce qu'ils produisent.
+ *
+ * La structure fonctionnelle existante (Create mode / Non-admin user /
+ * Edit mode) est conservée ; le classement unitaire/intégration est
+ * appliqué à l'intérieur de chacune de ces sections.
+ */
 describe('FormComponent', () => {
   const mockSession: Session = {
     id: 1,
@@ -29,7 +51,6 @@ describe('FormComponent', () => {
 
   const sharedImports = [
     RouterTestingModule,
-    HttpClientTestingModule,
     MatCardModule,
     MatIconModule,
     MatFormFieldModule,
@@ -39,6 +60,11 @@ describe('FormComponent', () => {
     MatSelectModule,
     BrowserAnimationsModule,
     FormComponent
+  ];
+
+  const sharedProviders = [
+    provideHttpClient(withInterceptorsFromDi()),
+    provideHttpClientTesting()
   ];
 
   // ─── Create mode ────────────────────────────────────────────────────────────
@@ -57,6 +83,7 @@ describe('FormComponent', () => {
       await TestBed.configureTestingModule({
         imports: sharedImports,
         providers: [
+          ...sharedProviders,
           { provide: SessionService, useValue: { sessionInformation: { admin: true } } },
           { provide: Router, useValue: mockRouter },
           { provide: ActivatedRoute, useValue: mockActivatedRoute },
@@ -73,54 +100,60 @@ describe('FormComponent', () => {
 
     afterEach(() => httpMock.verify());
 
-    it('should create', () => {
-      expect(component).toBeTruthy();
-    });
-
-    it('should be in create mode (onUpdate = false)', () => {
-      expect(component.onUpdate).toBe(false);
-    });
-
-    it('should initialize an empty form in create mode', () => {
-      expect(component.sessionForm?.get('name')?.value).toBe('');
-      expect(component.sessionForm?.get('date')?.value).toBe('');
-      expect(component.sessionForm?.get('teacher_id')?.value).toBe('');
-      expect(component.sessionForm?.get('description')?.value).toBe('');
-    });
-
-    it('should disable the submit button when the form is invalid', () => {
-      fixture.detectChanges();
-      const button: HTMLButtonElement = fixture.nativeElement.querySelector('button[type="submit"]');
-      expect(button.disabled).toBe(true);
-    });
-
-    it('should enable the submit button when the form is valid', () => {
-      component.sessionForm?.setValue({
-        name: 'New Session',
-        date: '2025-12-01',
-        teacher_id: 1,
-        description: 'A test session'
-      });
-      fixture.detectChanges();
-      const button: HTMLButtonElement = fixture.nativeElement.querySelector('button[type="submit"]');
-      expect(button.disabled).toBe(false);
-    });
-
-    it('should call the create API and navigate to sessions on submit', () => {
-      component.sessionForm?.setValue({
-        name: 'New Session',
-        date: '2025-12-01',
-        teacher_id: 1,
-        description: 'A test session'
+    describe('rendu (intégration DOM)', () => {
+      it('should disable the submit button when the form is invalid', () => {
+        fixture.detectChanges();
+        const button: HTMLButtonElement = fixture.nativeElement.querySelector('button[type="submit"]');
+        expect(button.disabled).toBe(true);
       });
 
-      component.submit();
+      it('should enable the submit button when the form is valid', () => {
+        component.sessionForm?.setValue({
+          name: 'New Session',
+          date: '2025-12-01',
+          teacher_id: 1,
+          description: 'A test session'
+        });
+        fixture.detectChanges();
+        const button: HTMLButtonElement = fixture.nativeElement.querySelector('button[type="submit"]');
+        expect(button.disabled).toBe(false);
+      });
+    });
 
-      const req = httpMock.expectOne('api/session');
-      expect(req.request.method).toBe('POST');
-      req.flush(mockSession);
+    describe('logique isolée (unitaire)', () => {
+      it('should create', () => {
+        expect(component).toBeTruthy();
+      });
 
-      expect(mockRouter.navigate).toHaveBeenCalledWith(['sessions']);
+      it('should be in create mode (onUpdate = false)', () => {
+        expect(component.onUpdate).toBe(false);
+      });
+
+      it('should initialize an empty form in create mode', () => {
+        expect(component.sessionForm?.get('name')?.value).toBe('');
+        expect(component.sessionForm?.get('date')?.value).toBe('');
+        expect(component.sessionForm?.get('teacher_id')?.value).toBe('');
+        expect(component.sessionForm?.get('description')?.value).toBe('');
+      });
+
+      // Unitaire : ne lit pas le DOM, vérifie seulement le contrat HTTP
+      // mocké (verbe + URL) et l'appel à router.navigate.
+      it('should call the create API and navigate to sessions on submit', () => {
+        component.sessionForm?.setValue({
+          name: 'New Session',
+          date: '2025-12-01',
+          teacher_id: 1,
+          description: 'A test session'
+        });
+
+        component.submit();
+
+        const req = httpMock.expectOne('api/session');
+        expect(req.request.method).toBe('POST');
+        req.flush(mockSession);
+
+        expect(mockRouter.navigate).toHaveBeenCalledWith(['sessions']);
+      });
     });
   });
 
@@ -139,6 +172,7 @@ describe('FormComponent', () => {
       await TestBed.configureTestingModule({
         imports: sharedImports,
         providers: [
+          ...sharedProviders,
           { provide: SessionService, useValue: { sessionInformation: { admin: false } } },
           { provide: Router, useValue: mockRouter },
           { provide: ActivatedRoute, useValue: mockActivatedRoute },
@@ -154,8 +188,24 @@ describe('FormComponent', () => {
 
     afterEach(() => httpMock.verify());
 
-    it('should redirect a non-admin user to /sessions on init', () => {
-      expect(mockRouter.navigate).toHaveBeenCalledWith(['/sessions']);
+    describe('rendu (intégration DOM)', () => {
+      // Documente un comportement réel, pas un bug à corriger : router.navigate()
+      // (form.component.ts:36) ne bloque pas l'exécution synchrone de ngOnInit, donc
+      // initForm() s'exécute quand même pour un non-admin et le formulaire reste
+      // rendu dans le DOM tant que la navigation asynchrone vers /sessions n'a pas
+      // été résolue par le vrai routeur.
+      it('should still render the form fields in the DOM even though a non-admin redirect was triggered', () => {
+        fixture.detectChanges();
+        const compiled = fixture.nativeElement as HTMLElement;
+        expect(compiled.querySelector('input[formControlName="name"]')).toBeTruthy();
+        expect(compiled.querySelector('textarea[formControlName="description"]')).toBeTruthy();
+      });
+    });
+
+    describe('logique isolée (unitaire)', () => {
+      it('should redirect a non-admin user to /sessions on init', () => {
+        expect(mockRouter.navigate).toHaveBeenCalledWith(['/sessions']);
+      });
     });
   });
 
@@ -175,6 +225,7 @@ describe('FormComponent', () => {
       await TestBed.configureTestingModule({
         imports: sharedImports,
         providers: [
+          ...sharedProviders,
           { provide: SessionService, useValue: { sessionInformation: { admin: true } } },
           { provide: Router, useValue: mockRouter },
           { provide: ActivatedRoute, useValue: mockActivatedRoute },
@@ -197,24 +248,39 @@ describe('FormComponent', () => {
 
     afterEach(() => httpMock.verify());
 
-    it('should be in edit mode (onUpdate = true)', () => {
-      expect(component.onUpdate).toBe(true);
+    describe('rendu (intégration DOM)', () => {
+      it('should disable the submit button when a required field is missing', () => {
+        component.sessionForm?.get('name')?.setValue('');
+        fixture.detectChanges();
+
+        const button: HTMLButtonElement = fixture.nativeElement.querySelector('button[type="submit"]');
+        expect(component.sessionForm?.invalid).toBe(true);
+        expect(button.disabled).toBe(true);
+      });
     });
 
-    it('should pre-fill the form with the existing session data', () => {
-      expect(component.sessionForm?.get('name')?.value).toBe('Yoga Morning');
-      expect(component.sessionForm?.get('teacher_id')?.value).toBe(2);
-      expect(component.sessionForm?.get('description')?.value).toBe('Morning yoga session');
-    });
+    describe('logique isolée (unitaire)', () => {
+      it('should be in edit mode (onUpdate = true)', () => {
+        expect(component.onUpdate).toBe(true);
+      });
 
-    it('should call the update API and navigate to sessions on submit', () => {
-      component.submit();
+      it('should pre-fill the form with the existing session data', () => {
+        expect(component.sessionForm?.get('name')?.value).toBe('Yoga Morning');
+        expect(component.sessionForm?.get('teacher_id')?.value).toBe(2);
+        expect(component.sessionForm?.get('description')?.value).toBe('Morning yoga session');
+      });
 
-      const req = httpMock.expectOne('api/session/1');
-      expect(req.request.method).toBe('PUT');
-      req.flush(mockSession);
+      // Unitaire : ne lit pas le DOM, vérifie seulement le contrat HTTP
+      // mocké (verbe + URL) et l'appel à router.navigate.
+      it('should call the update API and navigate to sessions on submit', () => {
+        component.submit();
 
-      expect(mockRouter.navigate).toHaveBeenCalledWith(['sessions']);
+        const req = httpMock.expectOne('api/session/1');
+        expect(req.request.method).toBe('PUT');
+        req.flush(mockSession);
+
+        expect(mockRouter.navigate).toHaveBeenCalledWith(['sessions']);
+      });
     });
   });
 });

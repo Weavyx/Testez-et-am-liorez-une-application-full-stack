@@ -1,4 +1,5 @@
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
+import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
@@ -32,19 +33,41 @@ const mockTeacher: Teacher = {
 function configureTestBed(sessionInformation: { admin: boolean; id: number }) {
   return TestBed.configureTestingModule({
     imports: [
-      HttpClientTestingModule,
       MatSnackBarModule,
       ReactiveFormsModule,
       DetailComponent
     ],
     providers: [
       provideRouter([]),
+      provideHttpClient(withInterceptorsFromDi()),
+      provideHttpClientTesting(),
       { provide: SessionService, useValue: { sessionInformation } },
       { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: '1' }) } } }
     ],
   }).compileComponents();
 }
 
+/**
+ * DetailComponent — page "Session detail"
+ *
+ * Cas du testing plan couverts :
+ *   - Session detail : affichage des informations (nom, description, professeur, date)
+ *   - Session detail : actions admin (bouton Delete, suppression)
+ *   - Session detail : actions non-admin (Participate / UnParticipate)
+ *
+ * Répartition des tests (méthodologie stricte du projet) :
+ *   - INTÉGRATION = le test lit lui-même le DOM réellement rendu.
+ *   - UNITAIRE = tout le reste, y compris les tests qui vérifient le contrat
+ *     HTTP réel (URL/verbe/payload) via HttpTestingController — ce dernier
+ *     mocke le backend, aucun réseau ni serveur réel n'est impliqué — même
+ *     si TestBed/fixture servent de plomberie (instanciation) sans
+ *     assertion sur ce qu'ils produisent.
+ *
+ * La structure fonctionnelle existante (as an admin user / as a non-admin
+ * user who has(n't) joined) est conservée ; le classement
+ * unitaire/intégration est appliqué à l'intérieur de chacune de ces
+ * sections.
+ */
 describe('DetailComponent', () => {
   let component: DetailComponent;
   let fixture: ComponentFixture<DetailComponent>;
@@ -73,51 +96,57 @@ describe('DetailComponent', () => {
       httpMock.verify();
     });
 
-    it('should create', () => {
-      expect(component).toBeTruthy();
+    describe('rendu (intégration DOM)', () => {
+      it('should display the session name, description, teacher and date', () => {
+        const compiled = fixture.nativeElement as HTMLElement;
+        expect(compiled.querySelector('h1')?.textContent).toContain('Yoga Session');
+        expect(compiled.querySelector('.description')?.textContent).toContain('A relaxing session');
+        const subtitle = compiled.querySelector('mat-card-subtitle');
+        expect(subtitle?.textContent).toContain('Margot');
+        expect(subtitle?.textContent).toContain('DELAHAYE');
+      });
+
+      it('should show the Delete button for an admin', () => {
+        const compiled = fixture.nativeElement as HTMLElement;
+        const deleteButton = Array.from(compiled.querySelectorAll('button'))
+          .find(btn => btn.textContent?.includes('Delete'));
+        expect(deleteButton).toBeDefined();
+      });
+
+      it('should not show the Participate/UnParticipate buttons for an admin', () => {
+        const compiled = fixture.nativeElement as HTMLElement;
+        const participateButton = Array.from(compiled.querySelectorAll('button'))
+          .find(btn => btn.textContent?.includes('Participate'));
+        expect(participateButton).toBeUndefined();
+      });
     });
 
-    it('should display the session name, description, teacher and date', () => {
-      const compiled = fixture.nativeElement as HTMLElement;
-      expect(compiled.querySelector('h1')?.textContent).toContain('Yoga Session');
-      expect(compiled.querySelector('.description')?.textContent).toContain('A relaxing session');
-      const subtitle = compiled.querySelector('mat-card-subtitle');
-      expect(subtitle?.textContent).toContain('Margot');
-      expect(subtitle?.textContent).toContain('DELAHAYE');
-    });
+    describe('logique isolée (unitaire)', () => {
+      it('should create', () => {
+        expect(component).toBeTruthy();
+      });
 
-    it('should show the Delete button for an admin', () => {
-      const compiled = fixture.nativeElement as HTMLElement;
-      const deleteButton = Array.from(compiled.querySelectorAll('button'))
-        .find(btn => btn.textContent?.includes('Delete'));
-      expect(deleteButton).toBeDefined();
-    });
+      it('should navigate back in browser history when back() is called', () => {
+        const historySpy = jest.spyOn(window.history, 'back').mockImplementation(() => {});
+        component.back();
+        expect(historySpy).toHaveBeenCalled();
+        historySpy.mockRestore();
+      });
 
-    it('should not show the Participate/UnParticipate buttons for an admin', () => {
-      const compiled = fixture.nativeElement as HTMLElement;
-      const participateButton = Array.from(compiled.querySelectorAll('button'))
-        .find(btn => btn.textContent?.includes('Participate'));
-      expect(participateButton).toBeUndefined();
-    });
+      // Unitaire : ne lit pas le DOM, vérifie seulement le contrat HTTP
+      // mocké (verbe + URL) et les appels à la snackbar/router.
+      it('should delete the session, notify the user and navigate to /sessions', () => {
+        const snackBarSpy = jest.spyOn(MatSnackBar.prototype, 'open')
+          .mockReturnValue({} as ReturnType<MatSnackBar['open']>);
 
-    it('should navigate back in browser history when back() is called', () => {
-      const historySpy = jest.spyOn(window.history, 'back').mockImplementation(() => {});
-      component.back();
-      expect(historySpy).toHaveBeenCalled();
-      historySpy.mockRestore();
-    });
+        component.delete();
 
-    it('should delete the session, notify the user and navigate to /sessions', () => {
-      const snackBarSpy = jest.spyOn(MatSnackBar.prototype, 'open')
-        .mockReturnValue({} as ReturnType<MatSnackBar['open']>);
+        const deleteReq = httpMock.expectOne({ url: 'api/session/1', method: 'DELETE' });
+        deleteReq.flush(null);
 
-      component.delete();
-
-      const deleteReq = httpMock.expectOne({ url: 'api/session/1', method: 'DELETE' });
-      deleteReq.flush(null);
-
-      expect(snackBarSpy).toHaveBeenCalledWith('Session deleted !', 'Close', { duration: 3000 });
-      expect(router.navigate).toHaveBeenCalledWith(['sessions']);
+        expect(snackBarSpy).toHaveBeenCalledWith('Session deleted !', 'Close', { duration: 3000 });
+        expect(router.navigate).toHaveBeenCalledWith(['sessions']);
+      });
     });
   });
 
@@ -144,33 +173,62 @@ describe('DetailComponent', () => {
       httpMock.verify();
     });
 
-    it('should not show the Delete button for a non-admin', () => {
-      const compiled = fixture.nativeElement as HTMLElement;
-      const deleteButton = Array.from(compiled.querySelectorAll('button'))
-        .find(btn => btn.textContent?.includes('Delete'));
-      expect(deleteButton).toBeUndefined();
+    describe('rendu (intégration DOM)', () => {
+      it('should not show the Delete button for a non-admin', () => {
+        const compiled = fixture.nativeElement as HTMLElement;
+        const deleteButton = Array.from(compiled.querySelectorAll('button'))
+          .find(btn => btn.textContent?.includes('Delete'));
+        expect(deleteButton).toBeUndefined();
+      });
+
+      it('should show the Participate button when the user has not joined', () => {
+        expect(component.isParticipate).toBe(false);
+        const compiled = fixture.nativeElement as HTMLElement;
+        const participateButton = Array.from(compiled.querySelectorAll('button'))
+          .find(btn => btn.textContent?.includes('Participate'));
+        expect(participateButton).toBeDefined();
+      });
+
+      it('should toggle the DOM to "Do not participate" and update the attendee count when the Participate button is clicked', () => {
+        const compiled = fixture.nativeElement as HTMLElement;
+        const participateButton = Array.from(compiled.querySelectorAll('button'))
+          .find(btn => btn.textContent?.includes('Participate')) as HTMLButtonElement;
+        expect(participateButton).toBeDefined();
+
+        participateButton.click();
+
+        const participateReq = httpMock.expectOne({ url: 'api/session/1/participate/1', method: 'POST' });
+        participateReq.flush(null);
+
+        const updatedSession: Session = { ...mockSession, users: [1, 2] };
+        httpMock.expectOne({ url: 'api/session/1', method: 'GET' }).flush(updatedSession);
+        httpMock.expectOne({ url: 'api/teacher/1', method: 'GET' }).flush(mockTeacher);
+        fixture.detectChanges();
+
+        const refreshed = fixture.nativeElement as HTMLElement;
+        const buttons = Array.from(refreshed.querySelectorAll('button'));
+        expect(buttons.find(btn => btn.textContent?.includes('Do not participate'))).toBeDefined();
+        expect(buttons.find(btn => btn.textContent?.includes('Participate'))).toBeUndefined();
+        expect(refreshed.textContent).toContain('2 attendees');
+      });
     });
 
-    it('should show the Participate button when the user has not joined', () => {
-      expect(component.isParticipate).toBe(false);
-      const compiled = fixture.nativeElement as HTMLElement;
-      const participateButton = Array.from(compiled.querySelectorAll('button'))
-        .find(btn => btn.textContent?.includes('Participate'));
-      expect(participateButton).toBeDefined();
-    });
+    describe('logique isolée (unitaire)', () => {
+      // Unitaire : ne lit pas le DOM, vérifie seulement le contrat HTTP
+      // mocké (verbe + URL) et l'état interne du composant.
+      it('should call the participate API with the session and user id, then reload the session', () => {
+        component.participate();
 
-    it('should call the participate API with the session and user id, then reload the session', () => {
-      component.participate();
+        const participateReq = httpMock.expectOne({ url: 'api/session/1/participate/1', method: 'POST' });
+        participateReq.flush(null);
 
-      const participateReq = httpMock.expectOne({ url: 'api/session/1/participate/1', method: 'POST' });
-      participateReq.flush(null);
+        const updatedSession: Session = { ...mockSession, users: [1, 2] };
+        httpMock.expectOne({ url: 'api/session/1', method: 'GET' }).flush(updatedSession);
+        httpMock.expectOne({ url: 'api/teacher/1', method: 'GET' }).flush(mockTeacher);
 
-      const updatedSession: Session = { ...mockSession, users: [1, 2] };
-      httpMock.expectOne({ url: 'api/session/1', method: 'GET' }).flush(updatedSession);
-      httpMock.expectOne({ url: 'api/teacher/1', method: 'GET' }).flush(mockTeacher);
-
-      fixture.detectChanges();
-      expect(component.isParticipate).toBe(true);
+        fixture.detectChanges();
+        expect(component.isParticipate).toBe(true);
+      });
     });
   });
 
@@ -197,26 +255,55 @@ describe('DetailComponent', () => {
       httpMock.verify();
     });
 
-    it('should show the UnParticipate button when the user has already joined', () => {
-      expect(component.isParticipate).toBe(true);
-      const compiled = fixture.nativeElement as HTMLElement;
-      const unParticipateButton = Array.from(compiled.querySelectorAll('button'))
-        .find(btn => btn.textContent?.includes('Do not participate'));
-      expect(unParticipateButton).toBeDefined();
+    describe('rendu (intégration DOM)', () => {
+      it('should show the UnParticipate button when the user has already joined', () => {
+        expect(component.isParticipate).toBe(true);
+        const compiled = fixture.nativeElement as HTMLElement;
+        const unParticipateButton = Array.from(compiled.querySelectorAll('button'))
+          .find(btn => btn.textContent?.includes('Do not participate'));
+        expect(unParticipateButton).toBeDefined();
+      });
+
+      it('should toggle the DOM to "Participate" and update the attendee count when the Do not participate button is clicked', () => {
+        const compiled = fixture.nativeElement as HTMLElement;
+        const unParticipateButton = Array.from(compiled.querySelectorAll('button'))
+          .find(btn => btn.textContent?.includes('Do not participate')) as HTMLButtonElement;
+        expect(unParticipateButton).toBeDefined();
+
+        unParticipateButton.click();
+
+        const unParticipateReq = httpMock.expectOne({ url: 'api/session/1/participate/1', method: 'DELETE' });
+        unParticipateReq.flush(null);
+
+        const updatedSession: Session = { ...mockSession, users: [] };
+        httpMock.expectOne({ url: 'api/session/1', method: 'GET' }).flush(updatedSession);
+        httpMock.expectOne({ url: 'api/teacher/1', method: 'GET' }).flush(mockTeacher);
+        fixture.detectChanges();
+
+        const refreshed = fixture.nativeElement as HTMLElement;
+        const buttons = Array.from(refreshed.querySelectorAll('button'));
+        expect(buttons.find(btn => btn.textContent?.includes('Participate'))).toBeDefined();
+        expect(buttons.find(btn => btn.textContent?.includes('Do not participate'))).toBeUndefined();
+        expect(refreshed.textContent).toContain('0 attendees');
+      });
     });
 
-    it('should call the unParticipate API with the session and user id, then reload the session', () => {
-      component.unParticipate();
+    describe('logique isolée (unitaire)', () => {
+      // Unitaire : ne lit pas le DOM, vérifie seulement le contrat HTTP
+      // mocké (verbe + URL) et l'état interne du composant.
+      it('should call the unParticipate API with the session and user id, then reload the session', () => {
+        component.unParticipate();
 
-      const unParticipateReq = httpMock.expectOne({ url: 'api/session/1/participate/1', method: 'DELETE' });
-      unParticipateReq.flush(null);
+        const unParticipateReq = httpMock.expectOne({ url: 'api/session/1/participate/1', method: 'DELETE' });
+        unParticipateReq.flush(null);
 
-      const updatedSession: Session = { ...mockSession, users: [] };
-      httpMock.expectOne({ url: 'api/session/1', method: 'GET' }).flush(updatedSession);
-      httpMock.expectOne({ url: 'api/teacher/1', method: 'GET' }).flush(mockTeacher);
+        const updatedSession: Session = { ...mockSession, users: [] };
+        httpMock.expectOne({ url: 'api/session/1', method: 'GET' }).flush(updatedSession);
+        httpMock.expectOne({ url: 'api/teacher/1', method: 'GET' }).flush(mockTeacher);
 
-      fixture.detectChanges();
-      expect(component.isParticipate).toBe(false);
+        fixture.detectChanges();
+        expect(component.isParticipate).toBe(false);
+      });
     });
   });
 });

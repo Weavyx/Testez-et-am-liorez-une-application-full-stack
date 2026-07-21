@@ -3,6 +3,20 @@ import { expect } from '@jest/globals';
 
 import { NotFoundComponent } from './not-found.component';
 
+/**
+ * NotFoundComponent — page 404 affichée sur route inconnue
+ *
+ * Cas du testing plan couverts :
+ *   - Navigation : route inconnue → le composant 404 se crée sans erreur
+ *
+ * Répartition des tests (méthodologie stricte du projet) :
+ *   - INTÉGRATION = le test lit lui-même le DOM réellement rendu.
+ *   - UNITAIRE = tout le reste, y compris les tests qui vérifient le contrat
+ *     HTTP réel (URL/verbe/payload) via HttpTestingController — ce dernier
+ *     mocke le backend, aucun réseau ni serveur réel n'est impliqué — même
+ *     si TestBed/fixture servent de plomberie (instanciation) sans
+ *     assertion sur ce qu'ils produisent.
+ */
 describe('NotFoundComponent', () => {
   let component: NotFoundComponent;
   let fixture: ComponentFixture<NotFoundComponent>;
@@ -18,7 +32,9 @@ describe('NotFoundComponent', () => {
     fixture.detectChanges();
   });
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
+  describe('logique isolée (unitaire)', () => {
+    it('should create', () => {
+      expect(component).toBeTruthy();
+    });
   });
 });

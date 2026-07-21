@@ -1,0 +1,10 @@
+{
+  "id": 301,
+  "name": "Mocked New Session",
+  "description": "Description de test.",
+  "date": "2026-09-05T00:00:00.000Z",
+  "teacher_id": 1,
+  "users": [],
+  "createdAt": "2026-07-17T10:00:00",
+  "updatedAt": "2026-07-17T10:00:00"
+}

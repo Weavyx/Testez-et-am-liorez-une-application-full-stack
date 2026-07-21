@@ -1,4 +1,4 @@
-import { HttpClientModule } from '@angular/common/http';
+import { provideHttpClient, withInterceptorsFromDi} from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -6,7 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { provideRouter, Router } from '@angular/router';
-import { expect } from '@jest/globals';
+import { expect, jest } from '@jest/globals';
 import { of } from 'rxjs';
 import { User } from 'src/app/core/models/user.interface';
 import { SessionService } from 'src/app/core/service/session.service';
@@ -14,6 +14,21 @@ import { UserService } from 'src/app/core/service/user.service';
 
 import { MeComponent } from './me.component';
 
+/**
+ * MeComponent — page "User information" (Account)
+ *
+ * Cas du testing plan couverts :
+ *   - Account : informations utilisateur affichées
+ *   - Account : suppression de compte (admin/non-admin)
+ *
+ * Répartition des tests (méthodologie stricte du projet) :
+ *   - INTÉGRATION = le test lit lui-même le DOM réellement rendu.
+ *   - UNITAIRE = tout le reste, y compris les tests qui vérifient le contrat
+ *     HTTP réel (URL/verbe/payload) via HttpTestingController — ce dernier
+ *     mocke le backend, aucun réseau ni serveur réel n'est impliqué — même
+ *     si TestBed/fixture servent de plomberie (instanciation) sans
+ *     assertion sur ce qu'ils produisent.
+ */
 describe('MeComponent', () => {
   let component: MeComponent;
   let fixture: ComponentFixture<MeComponent>;
@@ -45,20 +60,20 @@ describe('MeComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [
-        MatSnackBarModule,
-        HttpClientModule,
-        MatCardModule,
-        MatFormFieldModule,
-        MatIconModule,
-        MatInputModule,MeComponent
+        imports: [
+          MatSnackBarModule,
+          MatCardModule,
+          MatFormFieldModule,
+          MatIconModule,
+          MatInputModule,MeComponent
 
-      ],
-      providers: [
-        provideRouter([]),
-        { provide: SessionService, useValue: mockSessionService }
-      ],
-    })
+        ],
+        providers: [
+          provideRouter([]),
+          provideHttpClient(withInterceptorsFromDi()),
+          { provide: SessionService, useValue: mockSessionService }
+        ],
+      })
       .overrideProvider(MatSnackBar, { useValue: mockMatSnackBar })
       .compileComponents();
 
@@ -74,43 +89,58 @@ describe('MeComponent', () => {
     mockMatSnackBar.open.mockClear();
   });
 
-  it('should create', () => {
-    fixture.detectChanges();
-    expect(component).toBeTruthy();
+  describe('rendu (intégration DOM)', () => {
+    it('should fetch and display the user information in the DOM', () => {
+      fixture.detectChanges();
+
+      expect(userService.getById).toHaveBeenCalledWith('1');
+      expect(component.user).toEqual(mockUser);
+
+      const text: string = fixture.nativeElement.textContent;
+      expect(text).toContain('John');
+      expect(text).toContain('DOE');
+      expect(text).toContain(mockUser.email);
+    });
+
+    it('should show "You are admin" and hide the Delete account button when the displayed user is admin', () => {
+      jest.spyOn(userService, 'getById').mockReturnValue(of({ ...mockUser, admin: true }));
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.textContent).toContain('You are admin');
+      const deleteButton = Array.from(compiled.querySelectorAll('button'))
+        .find((btn) => btn.textContent?.includes('Delete'));
+      expect(deleteButton).toBeUndefined();
+    });
   });
 
-  it('should fetch and display the user information in the DOM', () => {
-    fixture.detectChanges();
+  describe('logique isolée (unitaire)', () => {
+    it('should create', () => {
+      fixture.detectChanges();
+      expect(component).toBeTruthy();
+    });
 
-    expect(userService.getById).toHaveBeenCalledWith('1');
-    expect(component.user).toEqual(mockUser);
+    it('should call window.history.back on back()', () => {
+      fixture.detectChanges();
+      const backSpy = jest.spyOn(window.history, 'back').mockImplementation(() => {});
 
-    const text: string = fixture.nativeElement.textContent;
-    expect(text).toContain('John');
-    expect(text).toContain('DOE');
-    expect(text).toContain(mockUser.email);
-  });
+      component.back();
 
-  it('should call window.history.back on back()', () => {
-    fixture.detectChanges();
-    const backSpy = jest.spyOn(window.history, 'back').mockImplementation(() => {});
+      expect(backSpy).toHaveBeenCalled();
+      backSpy.mockRestore();
+    });
 
-    component.back();
+    it('should delete the account, notify the user and navigate on delete', () => {
+      fixture.detectChanges();
+      jest.spyOn(userService, 'delete').mockReturnValue(of(undefined));
+      const navigateSpy = jest.spyOn(router, 'navigate');
 
-    expect(backSpy).toHaveBeenCalled();
-    backSpy.mockRestore();
-  });
+      component.delete();
 
-  it('should delete the account, notify the user and navigate on delete', () => {
-    fixture.detectChanges();
-    jest.spyOn(userService, 'delete').mockReturnValue(of(undefined));
-    const navigateSpy = jest.spyOn(router, 'navigate');
-
-    component.delete();
-
-    expect(userService.delete).toHaveBeenCalledWith('1');
-    expect(mockMatSnackBar.open).toHaveBeenCalledWith('Your account has been deleted !', 'Close', { duration: 3000 });
-    expect(mockSessionService.logOut).toHaveBeenCalled();
-    expect(navigateSpy).toHaveBeenCalledWith(['/']);
+      expect(userService.delete).toHaveBeenCalledWith('1');
+      expect(mockMatSnackBar.open).toHaveBeenCalledWith('Your account has been deleted !', 'Close', { duration: 3000 });
+      expect(mockSessionService.logOut).toHaveBeenCalled();
+      expect(navigateSpy).toHaveBeenCalledWith(['/']);
+    });
   });
 });
