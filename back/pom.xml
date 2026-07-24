@@ -198,11 +198,13 @@
                                 </rule>
                             </rules>
                             <!-- Packages sans logique métier propre (POJOs generes par Lombok/MapStruct) : exclus du perimetre de test de l'exercice -->
+                            <!-- SpringBootSecurityJwtApplication : classe de bootstrap Spring Boot (main() = SpringApplication.run(...)), sans branche ni comportement testable, meme raisonnement -->
                             <excludes>
                                 <exclude>com/openclassrooms/starterjwt/dto/**</exclude>
                                 <exclude>com/openclassrooms/starterjwt/mapper/**</exclude>
                                 <exclude>com/openclassrooms/starterjwt/payload/request/**</exclude>
                                 <exclude>com/openclassrooms/starterjwt/payload/response/**</exclude>
+                                <exclude>com/openclassrooms/starterjwt/SpringBootSecurityJwtApplication.class</exclude>
                             </excludes>
                         </configuration>
                     </execution>
