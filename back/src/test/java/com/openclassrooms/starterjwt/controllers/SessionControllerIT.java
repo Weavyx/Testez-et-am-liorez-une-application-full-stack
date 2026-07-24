@@ -1,0 +1,435 @@
+package com.openclassrooms.starterjwt.controllers;
+
+import com.openclassrooms.starterjwt.AbstractIntegrationTest;
+import com.openclassrooms.starterjwt.models.Session;
+import com.openclassrooms.starterjwt.models.Teacher;
+import com.openclassrooms.starterjwt.models.User;
+import com.openclassrooms.starterjwt.repository.SessionRepository;
+import com.openclassrooms.starterjwt.repository.TeacherRepository;
+import com.openclassrooms.starterjwt.repository.UserRepository;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.UUID;
+
+import static org.hamcrest.Matchers.hasSize;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+/**
+ * Tests d'intégration de SessionController : vraie base MySQL (Testcontainers)
+ * via AbstractIntegrationTest, requêtes passées par MockMvc, JWT réel généré
+ * via AbstractIntegrationTest.generateStandardUserToken()/generateAdminUserToken()
+ * (même pattern que TeacherControllerIT).
+ *
+ * Ces tests couvrent aussi le fix de sécurité de WebSecurityConfig
+ * (hasRole("ADMIN") sur POST/PUT/DELETE /api/session) : les cas
+ * "*_returns403_whenCalledByNonAdmin" prouvent que la restriction est
+ * effective, et les cas "participate/noLongerParticipate...ByNonAdmin"
+ * prouvent que ce fix ne bloque pas les routes d'inscription, qui doivent
+ * rester ouvertes à tout utilisateur authentifié.
+ */
+@AutoConfigureMockMvc
+@Transactional
+class SessionControllerIT extends AbstractIntegrationTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private SessionRepository sessionRepository;
+
+    @Autowired
+    private TeacherRepository teacherRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    private Teacher persistTeacher() {
+        return teacherRepository.save(Teacher.builder()
+                .firstName("Margot")
+                .lastName("Delahaye")
+                .build());
+    }
+
+    private Session persistSession(Teacher teacher) {
+        return sessionRepository.save(Session.builder()
+                .name("Hatha Yoga")
+                .date(new Date())
+                .description("Séance découverte")
+                .teacher(teacher)
+                .users(new ArrayList<>())
+                .build());
+    }
+
+    private User persistParticipant() {
+        return userRepository.save(User.builder()
+                .email("participant-" + UUID.randomUUID().toString().substring(0, 8) + "@test.com")
+                .firstName("Jean")
+                .lastName("Dupont")
+                .password("encoded-password")
+                .admin(false)
+                .build());
+    }
+
+    private String validSessionJson(Long teacherId) {
+        return "{"
+                + "\"name\":\"Hatha Yoga\","
+                + "\"date\":\"2026-08-01\","
+                + "\"teacher_id\":" + teacherId + ","
+                + "\"description\":\"Séance découverte\","
+                + "\"users\":[]"
+                + "}";
+    }
+
+    private String sessionJsonWithoutName(Long teacherId) {
+        return "{"
+                + "\"date\":\"2026-08-01\","
+                + "\"teacher_id\":" + teacherId + ","
+                + "\"description\":\"Séance découverte\""
+                + "}";
+    }
+
+    // ---------- GET /api/session/{id} ----------
+
+    @Test
+    void findById_returns200AndSession_whenSessionExists() throws Exception {
+        Teacher teacher = persistTeacher();
+        Session session = persistSession(teacher);
+        String token = generateStandardUserToken();
+
+        mockMvc.perform(get("/api/session/{id}", session.getId())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(session.getId()))
+                .andExpect(jsonPath("$.name").value("Hatha Yoga"))
+                .andExpect(jsonPath("$.description").value("Séance découverte"))
+                .andExpect(jsonPath("$.teacher_id").value(teacher.getId()))
+                .andExpect(jsonPath("$.createdAt").isNotEmpty())
+                .andExpect(jsonPath("$.updatedAt").isNotEmpty());
+    }
+
+    @Test
+    void findById_returns404_whenSessionDoesNotExist() throws Exception {
+        String token = generateStandardUserToken();
+
+        mockMvc.perform(get("/api/session/{id}", 999999L)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void findById_returns400_whenIdIsNotNumeric() throws Exception {
+        String token = generateStandardUserToken();
+
+        mockMvc.perform(get("/api/session/{id}", "abc")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void findById_returns401_whenNotAuthenticated() throws Exception {
+        Teacher teacher = persistTeacher();
+        Session session = persistSession(teacher);
+
+        mockMvc.perform(get("/api/session/{id}", session.getId()))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // ---------- GET /api/session ----------
+
+    @Test
+    void findAll_returns200AndAllSessions_whenAuthenticated() throws Exception {
+        Session session1 = persistSession(persistTeacher());
+        Session session2 = persistSession(persistTeacher());
+        String token = generateStandardUserToken();
+
+        mockMvc.perform(get("/api/session")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(2)));
+    }
+
+    @Test
+    void findAll_returns401_whenNotAuthenticated() throws Exception {
+        mockMvc.perform(get("/api/session"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // ---------- POST /api/session ----------
+
+    @Test
+    void create_returns200_whenCalledByAdmin() throws Exception {
+        Teacher teacher = persistTeacher();
+        String token = generateAdminUserToken();
+
+        mockMvc.perform(post("/api/session")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validSessionJson(teacher.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Hatha Yoga"))
+                .andExpect(jsonPath("$.teacher_id").value(teacher.getId()));
+    }
+
+    // Preuve du fix : un utilisateur authentifié mais non-admin ne peut pas créer de session.
+    @Test
+    void create_returns403_whenCalledByNonAdmin() throws Exception {
+        Teacher teacher = persistTeacher();
+        String token = generateStandardUserToken();
+
+        mockMvc.perform(post("/api/session")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validSessionJson(teacher.getId())))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void create_returns400_whenNameIsMissing() throws Exception {
+        Teacher teacher = persistTeacher();
+        String token = generateAdminUserToken();
+
+        mockMvc.perform(post("/api/session")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(sessionJsonWithoutName(teacher.getId())))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void create_returns401_whenNotAuthenticated() throws Exception {
+        Teacher teacher = persistTeacher();
+
+        mockMvc.perform(post("/api/session")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validSessionJson(teacher.getId())))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // ---------- PUT /api/session/{id} ----------
+
+    @Test
+    void update_returns200_whenCalledByAdmin() throws Exception {
+        Teacher teacher = persistTeacher();
+        Session session = persistSession(teacher);
+        String token = generateAdminUserToken();
+
+        mockMvc.perform(put("/api/session/{id}", session.getId())
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validSessionJson(teacher.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(session.getId()));
+    }
+
+    // Preuve du fix : un utilisateur authentifié mais non-admin ne peut pas modifier de session.
+    @Test
+    void update_returns403_whenCalledByNonAdmin() throws Exception {
+        Teacher teacher = persistTeacher();
+        Session session = persistSession(teacher);
+        String token = generateStandardUserToken();
+
+        mockMvc.perform(put("/api/session/{id}", session.getId())
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validSessionJson(teacher.getId())))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void update_returns400_whenIdIsNotNumeric() throws Exception {
+        Teacher teacher = persistTeacher();
+        String token = generateAdminUserToken();
+
+        mockMvc.perform(put("/api/session/{id}", "abc")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validSessionJson(teacher.getId())))
+                .andExpect(status().isBadRequest());
+    }
+
+    // Test de contrat : hasRole("ADMIN") est évalué par Spring Security avant
+    // que le controller n'atteigne Long.parseLong(id). Un id invalide combiné
+    // à un appelant non-admin doit donc rester bloqué en 403, jamais retomber
+    // en 400 (cas déjà couvert séparément par update_returns400_whenIdIsNotNumeric
+    // avec un token admin, pour isoler la validation du format de la question de rôle).
+    // Verrouille ce comportement contre une régression (ex. réordonnancement
+    // accidentel des matchers de sécurité).
+    @Test
+    void update_returns403NotBadRequest_whenCalledByNonAdminWithInvalidId() throws Exception {
+        Teacher teacher = persistTeacher();
+        String token = generateStandardUserToken();
+
+        mockMvc.perform(put("/api/session/{id}", "abc")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validSessionJson(teacher.getId())))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void update_returns400_whenValidationFails() throws Exception {
+        Teacher teacher = persistTeacher();
+        Session session = persistSession(teacher);
+        String token = generateAdminUserToken();
+
+        mockMvc.perform(put("/api/session/{id}", session.getId())
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(sessionJsonWithoutName(teacher.getId())))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void update_returns401_whenNotAuthenticated() throws Exception {
+        Teacher teacher = persistTeacher();
+        Session session = persistSession(teacher);
+
+        mockMvc.perform(put("/api/session/{id}", session.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validSessionJson(teacher.getId())))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // ---------- DELETE /api/session/{id} ----------
+
+    @Test
+    void delete_returns200_whenCalledByAdmin() throws Exception {
+        Teacher teacher = persistTeacher();
+        Session session = persistSession(teacher);
+        String token = generateAdminUserToken();
+
+        mockMvc.perform(delete("/api/session/{id}", session.getId())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
+    }
+
+    // Preuve du fix : un utilisateur authentifié mais non-admin ne peut pas supprimer de session.
+    @Test
+    void delete_returns403_whenCalledByNonAdmin() throws Exception {
+        Teacher teacher = persistTeacher();
+        Session session = persistSession(teacher);
+        String token = generateStandardUserToken();
+
+        mockMvc.perform(delete("/api/session/{id}", session.getId())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void delete_returns404_whenSessionDoesNotExist() throws Exception {
+        String token = generateAdminUserToken();
+
+        mockMvc.perform(delete("/api/session/{id}", 999999L)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void delete_returns401_whenNotAuthenticated() throws Exception {
+        Teacher teacher = persistTeacher();
+        Session session = persistSession(teacher);
+
+        mockMvc.perform(delete("/api/session/{id}", session.getId()))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // ---------- POST /api/session/{id}/participate/{userId} ----------
+
+    // Preuve que le fix ne casse pas participate : un non-admin authentifié peut s'inscrire.
+    @Test
+    void participate_returns200_whenCalledByNonAdmin() throws Exception {
+        Teacher teacher = persistTeacher();
+        Session session = persistSession(teacher);
+        User participant = persistParticipant();
+        String token = generateStandardUserToken();
+
+        mockMvc.perform(post("/api/session/{id}/participate/{userId}", session.getId(), participant.getId())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void participate_returns404_whenSessionDoesNotExist() throws Exception {
+        User participant = persistParticipant();
+        String token = generateStandardUserToken();
+
+        mockMvc.perform(post("/api/session/{id}/participate/{userId}", 999999L, participant.getId())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void participate_returns404_whenUserDoesNotExist() throws Exception {
+        Teacher teacher = persistTeacher();
+        Session session = persistSession(teacher);
+        String token = generateStandardUserToken();
+
+        mockMvc.perform(post("/api/session/{id}/participate/{userId}", session.getId(), 999999L)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void participate_returns400_whenAlreadyParticipating() throws Exception {
+        Teacher teacher = persistTeacher();
+        Session session = persistSession(teacher);
+        User participant = persistParticipant();
+        session.getUsers().add(participant);
+        sessionRepository.save(session);
+        String token = generateStandardUserToken();
+
+        mockMvc.perform(post("/api/session/{id}/participate/{userId}", session.getId(), participant.getId())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isBadRequest());
+    }
+
+    // ---------- DELETE /api/session/{id}/participate/{userId} ----------
+
+    // Preuve que le fix ne casse pas noLongerParticipate : un non-admin authentifié peut se désinscrire.
+    @Test
+    void noLongerParticipate_returns200_whenCalledByNonAdmin() throws Exception {
+        Teacher teacher = persistTeacher();
+        Session session = persistSession(teacher);
+        User participant = persistParticipant();
+        session.getUsers().add(participant);
+        sessionRepository.save(session);
+        String token = generateStandardUserToken();
+
+        mockMvc.perform(delete("/api/session/{id}/participate/{userId}", session.getId(), participant.getId())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void noLongerParticipate_returns404_whenSessionDoesNotExist() throws Exception {
+        String token = generateStandardUserToken();
+
+        mockMvc.perform(delete("/api/session/{id}/participate/{userId}", 999999L, 1L)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void noLongerParticipate_returns400_whenNotParticipating() throws Exception {
+        Teacher teacher = persistTeacher();
+        Session session = persistSession(teacher);
+        User participant = persistParticipant();
+        String token = generateStandardUserToken();
+
+        mockMvc.perform(delete("/api/session/{id}/participate/{userId}", session.getId(), participant.getId())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isBadRequest());
+    }
+}
