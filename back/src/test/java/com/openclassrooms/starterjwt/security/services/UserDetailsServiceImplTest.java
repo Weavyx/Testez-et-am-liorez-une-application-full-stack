@@ -45,7 +45,7 @@ class UserDetailsServiceImplTest {
         assertThat(userDetails.getFirstName()).isEqualTo("Jean");
         assertThat(userDetails.getLastName()).isEqualTo("Dupont");
         assertThat(userDetails.getPassword()).isEqualTo("encodedPassword");
-        assertThat(userDetails.getAdmin()).isNull();
+        assertThat(userDetails.getAdmin()).isTrue();
     }
 
     @Test
