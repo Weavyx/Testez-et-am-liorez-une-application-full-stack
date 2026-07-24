@@ -12,11 +12,14 @@
 //
 // Ce composant n'a AUCUNE gestion d'erreur API (submit() n'a pas de callback error sur le
 // subscribe, form.component.ts:51-65), même famille que create : aucun scénario "erreur API
-// affichée" n'est testé ici. Le cas "champ obligatoire manquant" n'est pas dupliqué non plus : la
-// validation (Validators.required) est strictement identique à celle de create (même FormGroup,
-// mêmes validators, form.component.ts:67-89) et déjà couverte par
-// sessions-create.cy.ts::"submit disabled when required field missing" — un doublon ici
-// n'apporterait aucune couverture supplémentaire spécifique au mode update.
+// affichée" n'est testé ici. Le cas "champ obligatoire manquant" est couvert par le test
+// "session update - submit disabled when required field missing" ci-dessous, avec la même
+// stratégie que sessions-create.cy.ts::"submit disabled when required field missing" (spy sur la
+// requête PUT + bouton submit disabled, pas de message d'erreur possible). La validation
+// (Validators.required) est strictement identique à celle de create (même FormGroup, mêmes
+// validators, form.component.ts:67-89) : ce test dédié ne vérifie donc pas une logique différente,
+// mais reste nécessaire pour aligner cette spec avec le testing plan officiel, qui exige une
+// couverture explicite par écran plutôt qu'un renvoi vers le test équivalent de create.
 //
 // Le dernier test ("real backend") tape le vrai backend Spring Boot (Docker, http://localhost:8080,
 // proxy /api) et NE PASSE QUE SI back/src/main/resources/sql/insert_teacher.sql a été appliqué
@@ -69,6 +72,52 @@ describe('Session update spec', () => {
       cy.get('mat-select[formControlName=teacher_id]').should('contain.text', 'Margot DELAHAYE')
 
       cy.get('button[type=submit]').should('not.be.disabled')
+    })
+  })
+
+  it('session update - submit disabled when required field missing (validation front only)', () => {
+    // Testing plan "affichage d'erreur en l'absence d'un champ obligatoire" : ce composant n'a pas
+    // de message d'erreur (ni front ni API, cf. en-tête de fichier) — la seule preuve possible est
+    // l'état du DOM (bouton disabled) + l'absence de requête réseau, même logique que
+    // sessions-create.cy.ts::"submit disabled when required field missing".
+    cy.intercept('POST', '/api/auth/login', {
+      statusCode: 200,
+      fixture: 'login-success.json', // admin: true
+    }).as('loginRequest')
+    cy.intercept('GET', '/api/teacher', { fixture: 'teachers.json' }).as('teacherRequest')
+
+    cy.fixture('session-detail.json').then((session) => {
+      cy.intercept('GET', '/api/session', [session]).as('sessionsRequest')
+      cy.intercept('GET', `/api/session/${session.id}`, session).as('sessionDetailRequest')
+      // Spy uniquement (pas de stub) : prouve qu'aucune requête n'est jamais émise si le form est invalide.
+      cy.intercept('PUT', `/api/session/${session.id}`).as('updateRequest')
+
+      cy.get('input[formControlName=email]').type('yoga@studio.com')
+      cy.get('input[formControlName=password]').type('test!1234')
+      cy.get('button[type=submit]').click()
+
+      cy.wait('@loginRequest')
+      cy.wait('@sessionsRequest')
+
+      cy.contains('.item', session.name).within(() => {
+        cy.contains('button', 'Edit').click()
+      })
+
+      cy.wait('@teacherRequest')
+      cy.wait('@sessionDetailRequest')
+
+      // name est prérempli par initForm() (form.component.ts:67-89) : on le vide pour déclencher
+      // Validators.required, contrairement à create où le champ part déjà vide.
+      cy.get('input[formControlName=name]').clear()
+
+      cy.get('button[type=submit]').should('be.disabled')
+
+      // Un Enter dans un champ du formulaire ne déclenche pas de soumission implicite tant que
+      // l'unique bouton submit reste disabled.
+      cy.get('textarea[formControlName=description]').type('{enter}')
+
+      cy.get('@updateRequest.all').should('have.length', 0)
+      cy.url().should('include', `/sessions/update/${session.id}`)
     })
   })
 

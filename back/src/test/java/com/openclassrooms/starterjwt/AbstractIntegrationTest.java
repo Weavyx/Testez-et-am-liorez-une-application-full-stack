@@ -66,25 +66,43 @@ public abstract class AbstractIntegrationTest {
      * généré via JwtUtils pour passer par le vrai AuthTokenFilter côté requête.
      */
     protected String generateStandardUserToken() {
-        return generateUserToken(false);
+        return generateTokenForUser(persistUser(false));
     }
 
     /**
      * Insère un utilisateur administrateur (admin=true) et retourne son JWT réel.
      */
     protected String generateAdminUserToken() {
-        return generateUserToken(true);
+        return generateTokenForUser(persistUser(true));
     }
 
-    private String generateUserToken(boolean admin) {
-        User user = userRepository.save(User.builder()
-                .email("it-" + UUID.randomUUID().toString().substring(0, 8) + "@test.com")
-                .firstName("Test")
-                .lastName("User")
-                .password("encoded-password")
-                .admin(admin)
-                .build());
+    /**
+     * Insère un utilisateur standard (admin=false) et retourne l'entité persistée
+     * (id, email générés) sans générer de token. À utiliser quand un test a besoin
+     * de connaître l'identité exacte de l'utilisateur (ex. contrôle d'autorisation
+     * "self" comme la suppression de compte), typiquement combiné avec
+     * generateTokenForUser(User).
+     */
+    protected User persistStandardUser() {
+        return persistUser(false);
+    }
 
+    /**
+     * Insère un utilisateur administrateur (admin=true) et retourne l'entité persistée,
+     * sans générer de token. Voir persistStandardUser().
+     */
+    protected User persistAdminUser() {
+        return persistUser(true);
+    }
+
+    /**
+     * Génère un JWT réel pour un utilisateur déjà persisté, en construisant le
+     * même UserDetailsImpl que produirait UserDetailsServiceImpl. Permet à un
+     * test de contrôler précisément quel utilisateur (email/id) porte le token,
+     * par exemple pour distinguer deux comptes distincts dans un scénario
+     * d'autorisation croisée.
+     */
+    protected String generateTokenForUser(User user) {
         UserDetailsImpl userDetails = UserDetailsImpl.builder()
                 .id(user.getId())
                 .username(user.getEmail())
@@ -98,5 +116,15 @@ public abstract class AbstractIntegrationTest {
                 userDetails, null, userDetails.getAuthorities());
 
         return jwtUtils.generateJwtToken(authentication);
+    }
+
+    private User persistUser(boolean admin) {
+        return userRepository.save(User.builder()
+                .email("it-" + UUID.randomUUID().toString().substring(0, 8) + "@test.com")
+                .firstName("Test")
+                .lastName("User")
+                .password("encoded-password")
+                .admin(admin)
+                .build());
     }
 }
