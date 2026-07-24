@@ -30,10 +30,6 @@ public class UserService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    public void delete(Long id) {
-        this.userRepository.deleteById(id);
-    }
-
     public void deleteById(Long id) {
         findById(id);
         assertRequestingUserIsSelf(id);
@@ -99,10 +95,6 @@ public class UserService {
 
     public boolean isAdmin(String email) {
         return this.userRepository.findByEmail(email).map(User::isAdmin).orElse(false);
-    }
-
-    public User save(User user) {
-        return this.userRepository.save(user);
     }
 
     public void register(String email, String lastName, String firstName, String rawPassword) {

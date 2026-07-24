@@ -68,13 +68,6 @@ class UserServiceTest {
     }
 
     @Test
-    void should_deleteUser_when_deleteIsCalled() {
-        userService.delete(1L);
-
-        verify(userRepository).deleteById(1L);
-    }
-
-    @Test
     void should_deleteUser_when_deleteByIdIsCalled_and_requesterIsTheOwner() {
         authenticateAs(1L);
         User user = User.builder().id(1L).email("owner@studio.com").firstName("Jean").lastName("Dupont")
@@ -302,17 +295,6 @@ class UserServiceTest {
         boolean result = userService.isAdmin("unknown@studio.com");
 
         assertThat(result).isFalse();
-    }
-
-    @Test
-    void should_returnSavedUser_when_saveIsCalled() {
-        User user = User.builder().id(1L).email("yoga@studio.com").firstName("Jean").lastName("Dupont")
-                .password("encodedPassword").admin(false).build();
-        when(userRepository.save(user)).thenReturn(user);
-
-        User result = userService.save(user);
-
-        assertThat(result).isEqualTo(user);
     }
 
     @Test
