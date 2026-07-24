@@ -368,7 +368,7 @@ class SessionControllerIT extends AbstractIntegrationTest {
     // s'inscrire lui-même (le token est généré pour le même utilisateur que
     // {userId}, cohérent avec le fix de contrôle de propriété du problème 2).
     @Test
-    void participate_returns200_whenCalledByNonAdmin() throws Exception {
+    void participate_returns200_whenNonAdminParticipatesForThemselves() throws Exception {
         Teacher teacher = persistTeacher();
         Session session = persistSession(teacher);
         User participant = persistParticipant();
@@ -433,7 +433,7 @@ class SessionControllerIT extends AbstractIntegrationTest {
     // Preuve que le fix ne casse pas noLongerParticipate : un non-admin authentifié
     // peut se désinscrire lui-même (même remarque que participate ci-dessus).
     @Test
-    void noLongerParticipate_returns200_whenCalledByNonAdmin() throws Exception {
+    void noLongerParticipate_returns200_whenNonAdminParticipatesForThemselves() throws Exception {
         Teacher teacher = persistTeacher();
         Session session = persistSession(teacher);
         User participant = persistParticipant();
