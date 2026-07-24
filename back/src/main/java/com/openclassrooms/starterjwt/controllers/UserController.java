@@ -27,7 +27,7 @@ public class UserController {
 
     @GetMapping("/{id}")
     public ResponseEntity<?> findById(@PathVariable("id") String id) {
-        User user = this.userService.findById(Long.valueOf(id));
+        User user = this.userService.findOwnProfile(Long.valueOf(id));
         return ResponseEntity.ok().body(this.userMapper.toDto(user));
     }
 

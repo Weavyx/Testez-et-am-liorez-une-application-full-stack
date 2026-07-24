@@ -1,16 +1,22 @@
 package com.openclassrooms.starterjwt.services;
 
 import com.openclassrooms.starterjwt.exception.BadRequestException;
+import com.openclassrooms.starterjwt.exception.ForbiddenException;
 import com.openclassrooms.starterjwt.exception.NotFoundException;
 import com.openclassrooms.starterjwt.exception.UnauthorizedException;
 import com.openclassrooms.starterjwt.models.User;
 import com.openclassrooms.starterjwt.repository.UserRepository;
+import com.openclassrooms.starterjwt.security.services.UserDetailsImpl;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
@@ -34,6 +40,25 @@ class UserServiceTest {
 
     @InjectMocks
     private UserService userService;
+
+    /**
+     * findOwnProfile() lit l'utilisateur authentifié via SecurityContextHolder
+     * (contrôle de propriété en couche service, même pattern que SessionService).
+     * Le contexte est nettoyé après chaque test pour ne pas fuiter d'une méthode
+     * de test à l'autre — SecurityContextHolder est un ThreadLocal.
+     */
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
+
+    private void authenticateAs(Long userId) {
+        UserDetailsImpl userDetails = UserDetailsImpl.builder()
+                .id(userId).username("user" + userId + "@studio.com").build();
+        Authentication authentication =
+                new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+    }
 
     @Test
     void should_deleteUser_when_deleteIsCalled() {
@@ -92,6 +117,52 @@ class UserServiceTest {
 
         assertThatThrownBy(() -> userService.findById(99L))
                 .isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void should_returnUser_when_findOwnProfileIsCalled_and_requesterIsTheOwner() {
+        authenticateAs(1L);
+        User user = User.builder().id(1L).email("owner@studio.com").firstName("Jean").lastName("Dupont")
+                .password("encodedPassword").admin(false).build();
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        User result = userService.findOwnProfile(1L);
+
+        assertThat(result).isEqualTo(user);
+    }
+
+    @Test
+    void should_throwForbiddenException_when_findOwnProfileIsCalled_and_requesterIsNotTheOwner() {
+        authenticateAs(2L);
+        User user = User.builder().id(1L).email("owner@studio.com").firstName("Jean").lastName("Dupont")
+                .password("encodedPassword").admin(false).build();
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> userService.findOwnProfile(1L))
+                .isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test
+    void should_throwNotFoundException_when_findOwnProfileIsCalled_and_userDoesNotExist() {
+        when(userRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> userService.findOwnProfile(99L))
+                .isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void should_returnUser_when_findByIdIsCalled_and_requesterIsAnotherUser() {
+        // findById() reste une lecture technique SANS contrôle de propriété :
+        // SessionMapper l'appelle pour résoudre les participants d'une session
+        // (mapping déclenché par un admin sur POST/PUT /api/session). Y ajouter
+        // le contrôle casserait ce mapping — d'où la méthode findOwnProfile()
+        // distincte pour l'exposition API.
+        authenticateAs(2L);
+        User user = User.builder().id(1L).email("owner@studio.com").firstName("Jean").lastName("Dupont")
+                .password("encodedPassword").admin(false).build();
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        assertThat(userService.findById(1L)).isEqualTo(user);
     }
 
     @Test

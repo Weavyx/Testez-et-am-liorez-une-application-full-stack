@@ -42,12 +42,15 @@ class UserControllerIT extends AbstractIntegrationTest {
     // ---------- GET /api/user/{id} ----------
 
     @Test
-    void findById_returns200AndUserDto_whenUserExists() throws Exception {
+    void findById_returns200AndUserDto_whenUserReadsOwnAccount() throws Exception {
         User user = persistStandardUser();
-        String requesterToken = generateStandardUserToken();
+        // Le token porte l'identité de `user` lui-même : c'est une lecture de son
+        // PROPRE compte. Utiliser generateStandardUserToken() créerait un second
+        // utilisateur distinct et testerait donc une lecture croisée (désormais 403).
+        String ownToken = generateTokenForUser(user);
 
         mockMvc.perform(get("/api/user/{id}", user.getId())
-                        .header("Authorization", "Bearer " + requesterToken))
+                        .header("Authorization", "Bearer " + ownToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(user.getId()))
                 .andExpect(jsonPath("$.email").value(user.getEmail()))
@@ -59,6 +62,24 @@ class UserControllerIT extends AbstractIntegrationTest {
                 // Point de vigilance sécurité : le mot de passe (encodé ou non) ne doit
                 // jamais apparaître dans la réponse, malgré @JsonIgnore sur UserDto#password.
                 .andExpect(jsonPath("$.password").doesNotExist());
+    }
+
+    // Contrôle de propriété en lecture : un utilisateur authentifié ne peut pas
+    // consulter la fiche d'un AUTRE compte (email, nom, statut admin). Même
+    // construction que delete_returns403_whenUserTriesToDeleteAnotherUsersAccount :
+    // deux comptes réellement distincts, chacun son email aléatoire.
+    @Test
+    void findById_returns403_whenUserReadsAnotherUsersAccount() throws Exception {
+        User userA = persistStandardUser();
+        User userB = persistStandardUser();
+        assertThat(userA.getEmail()).isNotEqualTo(userB.getEmail());
+        String tokenA = generateTokenForUser(userA);
+
+        mockMvc.perform(get("/api/user/{id}", userB.getId())
+                        .header("Authorization", "Bearer " + tokenA))
+                .andExpect(status().isForbidden())
+                // Aucune donnée de B ne fuite dans la réponse de refus.
+                .andExpect(jsonPath("$.email").doesNotExist());
     }
 
     @Test
