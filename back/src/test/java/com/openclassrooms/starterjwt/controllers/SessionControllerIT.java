@@ -38,6 +38,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * effective, et les cas "participate/noLongerParticipate...ByNonAdmin"
  * prouvent que ce fix ne bloque pas les routes d'inscription, qui doivent
  * rester ouvertes à tout utilisateur authentifié.
+ *
+ * Les cas "participate/noLongerParticipate...UserIdDoesNotMatchAuthenticatedPrincipal"
+ * couvrent le fix du contrôle de propriété (problème 2) : {userId} dans le path
+ * doit correspondre à l'utilisateur authentifié, sinon 403.
  */
 @AutoConfigureMockMvc
 @Transactional
@@ -278,6 +282,19 @@ class SessionControllerIT extends AbstractIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    // Preuve du fix (problème 1) : PUT sur un id inexistant retourne 404, pas 500.
+    @Test
+    void update_returns404_whenSessionDoesNotExist() throws Exception {
+        Teacher teacher = persistTeacher();
+        String token = generateAdminUserToken();
+
+        mockMvc.perform(put("/api/session/{id}", 999999L)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validSessionJson(teacher.getId())))
+                .andExpect(status().isNotFound());
+    }
+
     @Test
     void update_returns400_whenValidationFails() throws Exception {
         Teacher teacher = persistTeacher();
@@ -347,9 +364,25 @@ class SessionControllerIT extends AbstractIntegrationTest {
 
     // ---------- POST /api/session/{id}/participate/{userId} ----------
 
-    // Preuve que le fix ne casse pas participate : un non-admin authentifié peut s'inscrire.
+    // Preuve que le fix ne casse pas participate : un non-admin authentifié peut
+    // s'inscrire lui-même (le token est généré pour le même utilisateur que
+    // {userId}, cohérent avec le fix de contrôle de propriété du problème 2).
     @Test
-    void participate_returns200_whenCalledByNonAdmin() throws Exception {
+    void participate_returns200_whenNonAdminParticipatesForThemselves() throws Exception {
+        Teacher teacher = persistTeacher();
+        Session session = persistSession(teacher);
+        User participant = persistParticipant();
+        String token = generateTokenForUser(participant);
+
+        mockMvc.perform(post("/api/session/{id}/participate/{userId}", session.getId(), participant.getId())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
+    }
+
+    // Preuve du fix (problème 2) : un utilisateur authentifié ne peut pas inscrire
+    // un autre utilisateur que lui-même.
+    @Test
+    void participate_returns403_whenUserIdDoesNotMatchAuthenticatedPrincipal() throws Exception {
         Teacher teacher = persistTeacher();
         Session session = persistSession(teacher);
         User participant = persistParticipant();
@@ -357,7 +390,7 @@ class SessionControllerIT extends AbstractIntegrationTest {
 
         mockMvc.perform(post("/api/session/{id}/participate/{userId}", session.getId(), participant.getId())
                         .header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk());
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -388,7 +421,7 @@ class SessionControllerIT extends AbstractIntegrationTest {
         User participant = persistParticipant();
         session.getUsers().add(participant);
         sessionRepository.save(session);
-        String token = generateStandardUserToken();
+        String token = generateTokenForUser(participant);
 
         mockMvc.perform(post("/api/session/{id}/participate/{userId}", session.getId(), participant.getId())
                         .header("Authorization", "Bearer " + token))
@@ -397,9 +430,26 @@ class SessionControllerIT extends AbstractIntegrationTest {
 
     // ---------- DELETE /api/session/{id}/participate/{userId} ----------
 
-    // Preuve que le fix ne casse pas noLongerParticipate : un non-admin authentifié peut se désinscrire.
+    // Preuve que le fix ne casse pas noLongerParticipate : un non-admin authentifié
+    // peut se désinscrire lui-même (même remarque que participate ci-dessus).
     @Test
-    void noLongerParticipate_returns200_whenCalledByNonAdmin() throws Exception {
+    void noLongerParticipate_returns200_whenNonAdminParticipatesForThemselves() throws Exception {
+        Teacher teacher = persistTeacher();
+        Session session = persistSession(teacher);
+        User participant = persistParticipant();
+        session.getUsers().add(participant);
+        sessionRepository.save(session);
+        String token = generateTokenForUser(participant);
+
+        mockMvc.perform(delete("/api/session/{id}/participate/{userId}", session.getId(), participant.getId())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
+    }
+
+    // Preuve du fix (problème 2) : un utilisateur authentifié ne peut pas
+    // désinscrire un autre utilisateur que lui-même.
+    @Test
+    void noLongerParticipate_returns403_whenUserIdDoesNotMatchAuthenticatedPrincipal() throws Exception {
         Teacher teacher = persistTeacher();
         Session session = persistSession(teacher);
         User participant = persistParticipant();
@@ -409,7 +459,7 @@ class SessionControllerIT extends AbstractIntegrationTest {
 
         mockMvc.perform(delete("/api/session/{id}/participate/{userId}", session.getId(), participant.getId())
                         .header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk());
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -421,12 +471,25 @@ class SessionControllerIT extends AbstractIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+    // Problème 3 : noLongerParticipate() vérifie désormais l'existence de
+    // l'utilisateur, alignée sur participate() (même code de retour, 404).
+    @Test
+    void noLongerParticipate_returns404_whenUserDoesNotExist() throws Exception {
+        Teacher teacher = persistTeacher();
+        Session session = persistSession(teacher);
+        String token = generateStandardUserToken();
+
+        mockMvc.perform(delete("/api/session/{id}/participate/{userId}", session.getId(), 999999L)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNotFound());
+    }
+
     @Test
     void noLongerParticipate_returns400_whenNotParticipating() throws Exception {
         Teacher teacher = persistTeacher();
         Session session = persistSession(teacher);
         User participant = persistParticipant();
-        String token = generateStandardUserToken();
+        String token = generateTokenForUser(participant);
 
         mockMvc.perform(delete("/api/session/{id}/participate/{userId}", session.getId(), participant.getId())
                         .header("Authorization", "Bearer " + token))
