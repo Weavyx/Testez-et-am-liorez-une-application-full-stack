@@ -3,7 +3,6 @@ package com.openclassrooms.starterjwt.services;
 import com.openclassrooms.starterjwt.exception.BadRequestException;
 import com.openclassrooms.starterjwt.exception.ForbiddenException;
 import com.openclassrooms.starterjwt.exception.NotFoundException;
-import com.openclassrooms.starterjwt.exception.UnauthorizedException;
 import com.openclassrooms.starterjwt.models.Session;
 import com.openclassrooms.starterjwt.models.User;
 import com.openclassrooms.starterjwt.repository.SessionRepository;
@@ -38,8 +37,11 @@ public class UserService {
 
     public void deleteById(Long id, String currentUsername) {
         User user = findById(id);
+        // 403 et non 401 : l'appelant EST authentifié, c'est la propriété de la
+        // ressource qui est refusée. Aligne le comportement sur
+        // SessionService#assertRequestingUserIsSelf.
         if (!Objects.equals(currentUsername, user.getEmail())) {
-            throw new UnauthorizedException();
+            throw new ForbiddenException();
         }
         removeFromAllSessions(id);
         this.userRepository.deleteById(id);

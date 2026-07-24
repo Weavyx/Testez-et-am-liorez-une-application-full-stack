@@ -30,14 +30,19 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * via AbstractIntegrationTest, requêtes passées par MockMvc, JWT réel (même
  * pattern que TeacherControllerIT/SessionControllerIT/AuthControllerIT).
  *
- * Point d'attention particulier : DELETE /api/user/{id} applique un contrôle
- * d'autorisation applicatif (UserService#deleteById compare le username porté
- * par le token à l'email du compte ciblé) — ce n'est pas un rôle Spring
- * Security mais une vérification métier. Les tests "delete...ByAnotherUser"
- * utilisent donc deux utilisateurs bien distincts, chacun avec son propre
- * email généré aléatoirement par AbstractIntegrationTest#persistStandardUser(),
- * pour ne jamais risquer de comparer un utilisateur à lui-même par erreur
- * (même piège que celui identifié sur UserServiceTest#deleteById en unitaire).
+ * Point d'attention particulier : les DEUX endpoints appliquent un contrôle
+ * d'autorisation applicatif en couche service (UserService compare l'identité
+ * portée par le token au compte ciblé) — ce n'est pas un rôle Spring Security
+ * mais une vérification métier, qui répond 403 et non 401 : l'appelant est
+ * authentifié, c'est la propriété de la ressource qui lui est refusée.
+ *
+ * Les tests de lecture/suppression croisée utilisent donc deux utilisateurs
+ * bien distincts, chacun avec son propre email généré aléatoirement par
+ * AbstractIntegrationTest#persistStandardUser(), pour ne jamais risquer de
+ * comparer un utilisateur à lui-même par erreur (même piège que celui
+ * identifié sur UserServiceTest#deleteById en unitaire). Symétriquement, les
+ * tests du cas nominal utilisent generateTokenForUser(user) et non
+ * generateStandardUserToken(), qui créerait un second utilisateur distinct.
  */
 @AutoConfigureMockMvc
 @Transactional
@@ -195,15 +200,17 @@ class UserControllerIT extends AbstractIntegrationTest {
     // deux comptes distincts, chacun avec son propre email aléatoire et son propre
     // token, pour exclure toute ambiguïté sur "qui essaie de supprimer qui".
     @Test
-    void delete_returns401_whenUserTriesToDeleteAnotherUsersAccount() throws Exception {
+    void delete_returns403_whenUserTriesToDeleteAnotherUsersAccount() throws Exception {
         User userA = persistStandardUser();
         User userB = persistStandardUser();
         assertThat(userA.getEmail()).isNotEqualTo(userB.getEmail());
         String tokenA = generateTokenForUser(userA);
 
+        // 403 et non 401 : A est bien authentifié, c'est la propriété de la
+        // ressource qui lui est refusée (même sémantique que SessionService).
         mockMvc.perform(delete("/api/user/{id}", userB.getId())
                         .header("Authorization", "Bearer " + tokenA))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isForbidden());
 
         // userB n'a pas été supprimé : le contrôle a bien bloqué l'opération avant
         // toute écriture, pas seulement renvoyé un statut d'erreur en façade.

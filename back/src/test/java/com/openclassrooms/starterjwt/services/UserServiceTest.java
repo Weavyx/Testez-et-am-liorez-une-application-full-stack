@@ -3,7 +3,6 @@ package com.openclassrooms.starterjwt.services;
 import com.openclassrooms.starterjwt.exception.BadRequestException;
 import com.openclassrooms.starterjwt.exception.ForbiddenException;
 import com.openclassrooms.starterjwt.exception.NotFoundException;
-import com.openclassrooms.starterjwt.exception.UnauthorizedException;
 import com.openclassrooms.starterjwt.models.Session;
 import com.openclassrooms.starterjwt.models.User;
 import com.openclassrooms.starterjwt.repository.SessionRepository;
@@ -87,13 +86,13 @@ class UserServiceTest {
     }
 
     @Test
-    void should_throwUnauthorizedException_when_deleteByIdIsCalled_and_currentUsernameDoesNotMatchUserEmail() {
+    void should_throwForbiddenException_when_deleteByIdIsCalled_and_currentUsernameDoesNotMatchUserEmail() {
         User user = User.builder().id(1L).email("owner@studio.com").firstName("Jean").lastName("Dupont")
                 .password("encodedPassword").admin(false).build();
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
 
         assertThatThrownBy(() -> userService.deleteById(1L, "intruder@studio.com"))
-                .isInstanceOf(UnauthorizedException.class);
+                .isInstanceOf(ForbiddenException.class);
 
         verify(userRepository, never()).deleteById(any());
     }
