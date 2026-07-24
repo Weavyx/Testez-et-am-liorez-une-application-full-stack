@@ -278,6 +278,19 @@ class SessionControllerIT extends AbstractIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    // Preuve du fix (problème 1) : PUT sur un id inexistant retourne 404, pas 500.
+    @Test
+    void update_returns404_whenSessionDoesNotExist() throws Exception {
+        Teacher teacher = persistTeacher();
+        String token = generateAdminUserToken();
+
+        mockMvc.perform(put("/api/session/{id}", 999999L)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validSessionJson(teacher.getId())))
+                .andExpect(status().isNotFound());
+    }
+
     @Test
     void update_returns400_whenValidationFails() throws Exception {
         Teacher teacher = persistTeacher();

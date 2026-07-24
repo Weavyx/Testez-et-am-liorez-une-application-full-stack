@@ -109,6 +109,7 @@ class SessionServiceTest {
     void should_setIdFromParameter_when_updateIsCalled() {
         Session session = Session.builder().id(999L).name("Yoga").build();
         ArgumentCaptor<Session> captor = ArgumentCaptor.forClass(Session.class);
+        when(sessionRepository.existsById(1L)).thenReturn(true);
         when(sessionRepository.save(any(Session.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Session result = sessionService.update(1L, session);
@@ -116,6 +117,16 @@ class SessionServiceTest {
         verify(sessionRepository).save(captor.capture());
         assertThat(captor.getValue().getId()).isEqualTo(1L);
         assertThat(result.getId()).isEqualTo(1L);
+    }
+
+    @Test
+    void should_throwNotFoundException_when_updateIsCalled_and_sessionDoesNotExist() {
+        Session session = Session.builder().id(99L).name("Yoga").build();
+        when(sessionRepository.existsById(99L)).thenReturn(false);
+
+        assertThatThrownBy(() -> sessionService.update(99L, session))
+                .isInstanceOf(NotFoundException.class);
+        verify(sessionRepository, never()).save(any());
     }
 
     @Test

@@ -42,6 +42,9 @@ public class SessionService {
     }
 
     public Session update(Long id, Session session) {
+        if (!this.sessionRepository.existsById(id)) {
+            throw new NotFoundException();
+        }
         session.setId(id);
         return this.sessionRepository.save(session);
     }
