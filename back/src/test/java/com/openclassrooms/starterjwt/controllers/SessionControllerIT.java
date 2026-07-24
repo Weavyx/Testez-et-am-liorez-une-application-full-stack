@@ -344,6 +344,19 @@ class SessionControllerIT extends AbstractIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    // P1-04 : Long.parseLong(id) est appelé directement dans le controller (pas
+    // via un @PathVariable Long), donc c'est bien NumberFormatException qui est
+    // levée, interceptée par GlobalExceptionHandler → 400 (même mécanisme que
+    // findById_returns400_whenIdIsNotNumeric et update_returns400_whenIdIsNotNumeric).
+    @Test
+    void delete_returns400_whenIdIsNotNumeric() throws Exception {
+        String token = generateAdminUserToken();
+
+        mockMvc.perform(delete("/api/session/{id}", "abc")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isBadRequest());
+    }
+
     @Test
     void delete_returns404_whenSessionDoesNotExist() throws Exception {
         String token = generateAdminUserToken();
@@ -391,6 +404,19 @@ class SessionControllerIT extends AbstractIntegrationTest {
         mockMvc.perform(post("/api/session/{id}/participate/{userId}", session.getId(), participant.getId())
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isForbidden());
+    }
+
+    // P1-04 : id non-numérique → Long.parseLong(id) est évalué avant tout accès
+    // au service (donc avant même la vérification de propriété), NumberFormatException
+    // interceptée par GlobalExceptionHandler → 400.
+    @Test
+    void participate_returns400_whenIdIsNotNumeric() throws Exception {
+        User participant = persistParticipant();
+        String token = generateTokenForUser(participant);
+
+        mockMvc.perform(post("/api/session/{id}/participate/{userId}", "abc", participant.getId())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -460,6 +486,21 @@ class SessionControllerIT extends AbstractIntegrationTest {
         mockMvc.perform(delete("/api/session/{id}/participate/{userId}", session.getId(), participant.getId())
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isForbidden());
+    }
+
+    // P1-04 : même mécanisme que participate_returns400_whenIdIsNotNumeric.
+    @Test
+    void noLongerParticipate_returns400_whenIdIsNotNumeric() throws Exception {
+        Teacher teacher = persistTeacher();
+        Session session = persistSession(teacher);
+        User participant = persistParticipant();
+        session.getUsers().add(participant);
+        sessionRepository.save(session);
+        String token = generateTokenForUser(participant);
+
+        mockMvc.perform(delete("/api/session/{id}/participate/{userId}", "abc", participant.getId())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
