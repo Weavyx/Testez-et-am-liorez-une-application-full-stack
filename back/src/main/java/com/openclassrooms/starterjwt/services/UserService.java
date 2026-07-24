@@ -13,7 +13,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -35,14 +34,9 @@ public class UserService {
         this.userRepository.deleteById(id);
     }
 
-    public void deleteById(Long id, String currentUsername) {
-        User user = findById(id);
-        // 403 et non 401 : l'appelant EST authentifié, c'est la propriété de la
-        // ressource qui est refusée. Aligne le comportement sur
-        // SessionService#assertRequestingUserIsSelf.
-        if (!Objects.equals(currentUsername, user.getEmail())) {
-            throw new ForbiddenException();
-        }
+    public void deleteById(Long id) {
+        findById(id);
+        assertRequestingUserIsSelf(id);
         removeFromAllSessions(id);
         this.userRepository.deleteById(id);
     }
