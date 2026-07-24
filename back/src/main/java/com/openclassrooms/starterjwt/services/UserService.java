@@ -4,23 +4,31 @@ import com.openclassrooms.starterjwt.exception.BadRequestException;
 import com.openclassrooms.starterjwt.exception.ForbiddenException;
 import com.openclassrooms.starterjwt.exception.NotFoundException;
 import com.openclassrooms.starterjwt.exception.UnauthorizedException;
+import com.openclassrooms.starterjwt.models.Session;
 import com.openclassrooms.starterjwt.models.User;
+import com.openclassrooms.starterjwt.repository.SessionRepository;
 import com.openclassrooms.starterjwt.repository.UserRepository;
 import com.openclassrooms.starterjwt.security.services.UserDetailsImpl;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class UserService {
     private final UserRepository userRepository;
+    private final SessionRepository sessionRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository,
+                       SessionRepository sessionRepository,
+                       PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.sessionRepository = sessionRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -33,7 +41,37 @@ public class UserService {
         if (!Objects.equals(currentUsername, user.getEmail())) {
             throw new UnauthorizedException();
         }
+        removeFromAllSessions(id);
         this.userRepository.deleteById(id);
+    }
+
+    /**
+     * Desinscrit l'utilisateur de toutes les sessions auxquelles il participe,
+     * avant la suppression de son compte.
+     *
+     * Necessaire : la table de jointure PARTICIPATE est portee par Session
+     * (@ManyToMany cote Session uniquement), User ne declare aucune relation
+     * inverse, donc aucun cascade ne nettoie les participations. Sans ce
+     * nettoyage, userRepository.deleteById() viole la contrainte de cle
+     * etrangere participate.user_id -> users.id et remonte une
+     * DataIntegrityViolationException non geree, soit un 500 sur le cas normal
+     * (P2 de AUDIT_PHASE1_ZONE_AUTH_USER.md).
+     *
+     * La reconstruction de la liste par filtrage reprend exactement le pattern
+     * de SessionService#noLongerParticipate.
+     */
+    private void removeFromAllSessions(Long userId) {
+        List<Session> sessions = this.sessionRepository.findAll();
+        for (Session session : sessions) {
+            List<User> participants = session.getUsers();
+            if (participants == null || participants.stream().noneMatch(u -> u.getId().equals(userId))) {
+                continue;
+            }
+            session.setUsers(participants.stream()
+                    .filter(u -> !u.getId().equals(userId))
+                    .collect(Collectors.toList()));
+            this.sessionRepository.save(session);
+        }
     }
 
     public User findById(Long id) {

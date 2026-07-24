@@ -1,13 +1,23 @@
 package com.openclassrooms.starterjwt.controllers;
 
 import com.openclassrooms.starterjwt.AbstractIntegrationTest;
+import com.openclassrooms.starterjwt.models.Session;
+import com.openclassrooms.starterjwt.models.Teacher;
 import com.openclassrooms.starterjwt.models.User;
+import com.openclassrooms.starterjwt.repository.SessionRepository;
+import com.openclassrooms.starterjwt.repository.TeacherRepository;
 import com.openclassrooms.starterjwt.repository.UserRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -38,6 +48,29 @@ class UserControllerIT extends AbstractIntegrationTest {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private SessionRepository sessionRepository;
+
+    @Autowired
+    private TeacherRepository teacherRepository;
+
+    @PersistenceContext
+    private EntityManager entityManager;
+
+    private Session persistSessionWithParticipant(User participant) {
+        Teacher teacher = teacherRepository.save(Teacher.builder()
+                .firstName("Margot")
+                .lastName("Delahaye")
+                .build());
+        return sessionRepository.save(Session.builder()
+                .name("Hatha Yoga")
+                .date(new Date())
+                .description("Séance découverte")
+                .teacher(teacher)
+                .users(new ArrayList<>(List.of(participant)))
+                .build());
+    }
 
     // ---------- GET /api/user/{id} ----------
 
@@ -120,6 +153,41 @@ class UserControllerIT extends AbstractIntegrationTest {
                 .andExpect(status().isOk());
 
         assertThat(userRepository.findById(owner.getId())).isEmpty();
+    }
+
+    // Cas NORMAL (tout utilisateur inscrit à au moins une session), et non cas
+    // limite : avant le fix, la suppression du compte laissait la ligne de la table
+    // PARTICIPATE orpheline, la table de jointure étant portée par Session et User
+    // ne déclarant aucune relation inverse (donc aucun cascade).
+    //
+    // Vérifié : ce test est bien rouge sans le fix. Nuance sur le mode d'échec —
+    // en production (transaction courte, commit réel) c'est la contrainte FK
+    // participate.user_id -> users.id qui saute, d'où la DataIntegrityViolation
+    // non gérée et le 500 constaté au Postman du 24/07/2026 ; ici, dans la
+    // transaction longue du test, Hibernate détecte l'incohérence plus tôt et lève
+    // une TransientObjectException au flush. Cause identique, symptôme différent.
+    @Test
+    void delete_returns200AndClearsParticipations_whenUserDeletesOwnAccountWhileEnrolledInASession() throws Exception {
+        User owner = persistStandardUser();
+        Session session = persistSessionWithParticipant(owner);
+        String ownerToken = generateTokenForUser(owner);
+
+        mockMvc.perform(delete("/api/user/{id}", owner.getId())
+                        .header("Authorization", "Bearer " + ownerToken))
+                .andExpect(status().isOk());
+
+        // Force l'exécution réelle des DELETE/UPDATE en base. Sans ce flush, le
+        // contexte de persistance de ce test @Transactional pourrait différer les
+        // écritures jusqu'au rollback : la violation de contrainte FK (comportement
+        // d'avant le fix) ne serait alors jamais déclenchée et le test serait vert
+        // à tort. Le clear() force ensuite les relectures ci-dessous à repartir de
+        // la base et non du cache de premier niveau.
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(userRepository.findById(owner.getId())).isEmpty();
+        Session reloaded = sessionRepository.findById(session.getId()).orElseThrow();
+        assertThat(reloaded.getUsers()).extracting(User::getId).doesNotContain(owner.getId());
     }
 
     // Preuve du contrôle d'autorisation applicatif : un utilisateur authentifié
