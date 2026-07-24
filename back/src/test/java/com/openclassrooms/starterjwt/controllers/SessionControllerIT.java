@@ -434,6 +434,19 @@ class SessionControllerIT extends AbstractIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+    // Problème 3 : noLongerParticipate() vérifie désormais l'existence de
+    // l'utilisateur, alignée sur participate() (même code de retour, 404).
+    @Test
+    void noLongerParticipate_returns404_whenUserDoesNotExist() throws Exception {
+        Teacher teacher = persistTeacher();
+        Session session = persistSession(teacher);
+        String token = generateStandardUserToken();
+
+        mockMvc.perform(delete("/api/session/{id}/participate/{userId}", session.getId(), 999999L)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNotFound());
+    }
+
     @Test
     void noLongerParticipate_returns400_whenNotParticipating() throws Exception {
         Teacher teacher = persistTeacher();

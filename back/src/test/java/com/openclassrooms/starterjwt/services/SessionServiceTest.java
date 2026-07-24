@@ -187,6 +187,7 @@ class SessionServiceTest {
         users.add(userToKeep);
         Session session = Session.builder().id(1L).name("Yoga").users(users).build();
         when(sessionRepository.findById(1L)).thenReturn(Optional.of(session));
+        when(userRepository.findById(10L)).thenReturn(Optional.of(userToRemove));
 
         sessionService.noLongerParticipate(1L, 10L);
 
@@ -203,10 +204,25 @@ class SessionServiceTest {
         verify(sessionRepository, never()).save(any());
     }
 
+    // Problème 3 : noLongerParticipate() doit désormais vérifier l'existence de
+    // l'utilisateur avant d'agir, comme le fait déjà participate().
     @Test
-    void should_throwBadRequestException_when_noLongerParticipateIsCalled_and_userIsNotParticipating() {
+    void should_throwNotFoundException_when_noLongerParticipateIsCalled_and_userDoesNotExist() {
         Session session = Session.builder().id(1L).name("Yoga").users(new ArrayList<>()).build();
         when(sessionRepository.findById(1L)).thenReturn(Optional.of(session));
+        when(userRepository.findById(10L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> sessionService.noLongerParticipate(1L, 10L))
+                .isInstanceOf(NotFoundException.class);
+        verify(sessionRepository, never()).save(any());
+    }
+
+    @Test
+    void should_throwBadRequestException_when_noLongerParticipateIsCalled_and_userIsNotParticipating() {
+        User user = User.builder().id(10L).email("user@studio.com").lastName("Doe").firstName("John").password("pw").build();
+        Session session = Session.builder().id(1L).name("Yoga").users(new ArrayList<>()).build();
+        when(sessionRepository.findById(1L)).thenReturn(Optional.of(session));
+        when(userRepository.findById(10L)).thenReturn(Optional.of(user));
 
         assertThatThrownBy(() -> sessionService.noLongerParticipate(1L, 10L))
                 .isInstanceOf(BadRequestException.class);
