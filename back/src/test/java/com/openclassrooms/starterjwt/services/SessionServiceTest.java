@@ -1,17 +1,24 @@
 package com.openclassrooms.starterjwt.services;
 
 import com.openclassrooms.starterjwt.exception.BadRequestException;
+import com.openclassrooms.starterjwt.exception.ForbiddenException;
 import com.openclassrooms.starterjwt.exception.NotFoundException;
 import com.openclassrooms.starterjwt.models.Session;
 import com.openclassrooms.starterjwt.models.User;
 import com.openclassrooms.starterjwt.repository.SessionRepository;
 import com.openclassrooms.starterjwt.repository.UserRepository;
+import com.openclassrooms.starterjwt.security.services.UserDetailsImpl;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,6 +44,28 @@ class SessionServiceTest {
 
     @InjectMocks
     private SessionService sessionService;
+
+    /**
+     * participate()/noLongerParticipate() lisent l'utilisateur authentifié via
+     * SecurityContextHolder (fix de contrôle de propriété) ; les tests existants
+     * appellent tous ces méthodes avec userId=10L, donc on authentifie par
+     * défaut ce même id ici pour ne pas avoir à modifier chaque test individuel.
+     */
+    @BeforeEach
+    void authenticateAsUser10() {
+        authenticateAs(10L);
+    }
+
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
+
+    private void authenticateAs(Long userId) {
+        UserDetailsImpl userDetails = UserDetailsImpl.builder().id(userId).username("user" + userId + "@studio.com").build();
+        Authentication authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+    }
 
     @Test
     void should_saveSession_when_createIsCalled() {
@@ -178,6 +207,20 @@ class SessionServiceTest {
         verify(sessionRepository, never()).save(any());
     }
 
+    // Problème 2 : participate() ne doit pouvoir inscrire que l'utilisateur authentifié lui-même.
+    @Test
+    void should_throwForbiddenException_when_participateIsCalled_and_userIdDoesNotMatchAuthenticatedPrincipal() {
+        authenticateAs(999L);
+        User user = User.builder().id(10L).email("user@studio.com").lastName("Doe").firstName("John").password("pw").build();
+        Session session = Session.builder().id(1L).name("Yoga").users(new ArrayList<>()).build();
+        when(sessionRepository.findById(1L)).thenReturn(Optional.of(session));
+        when(userRepository.findById(10L)).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> sessionService.participate(1L, 10L))
+                .isInstanceOf(ForbiddenException.class);
+        verify(sessionRepository, never()).save(any());
+    }
+
     @Test
     void should_removeUserFromSession_when_noLongerParticipateIsCalled_and_userIsParticipating() {
         User userToRemove = User.builder().id(10L).email("user@studio.com").lastName("Doe").firstName("John").password("pw").build();
@@ -226,6 +269,22 @@ class SessionServiceTest {
 
         assertThatThrownBy(() -> sessionService.noLongerParticipate(1L, 10L))
                 .isInstanceOf(BadRequestException.class);
+        verify(sessionRepository, never()).save(any());
+    }
+
+    // Problème 2 : noLongerParticipate() ne doit pouvoir désinscrire que l'utilisateur authentifié lui-même.
+    @Test
+    void should_throwForbiddenException_when_noLongerParticipateIsCalled_and_userIdDoesNotMatchAuthenticatedPrincipal() {
+        authenticateAs(999L);
+        User userToRemove = User.builder().id(10L).email("user@studio.com").lastName("Doe").firstName("John").password("pw").build();
+        List<User> users = new ArrayList<>();
+        users.add(userToRemove);
+        Session session = Session.builder().id(1L).name("Yoga").users(users).build();
+        when(sessionRepository.findById(1L)).thenReturn(Optional.of(session));
+        when(userRepository.findById(10L)).thenReturn(Optional.of(userToRemove));
+
+        assertThatThrownBy(() -> sessionService.noLongerParticipate(1L, 10L))
+                .isInstanceOf(ForbiddenException.class);
         verify(sessionRepository, never()).save(any());
     }
 }

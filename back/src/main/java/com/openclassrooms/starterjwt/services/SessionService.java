@@ -1,11 +1,14 @@
 package com.openclassrooms.starterjwt.services;
 
 import com.openclassrooms.starterjwt.exception.BadRequestException;
+import com.openclassrooms.starterjwt.exception.ForbiddenException;
 import com.openclassrooms.starterjwt.exception.NotFoundException;
 import com.openclassrooms.starterjwt.models.Session;
 import com.openclassrooms.starterjwt.models.User;
 import com.openclassrooms.starterjwt.repository.SessionRepository;
 import com.openclassrooms.starterjwt.repository.UserRepository;
+import com.openclassrooms.starterjwt.security.services.UserDetailsImpl;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -56,6 +59,8 @@ public class SessionService {
             throw new NotFoundException();
         }
 
+        assertRequestingUserIsSelf(userId);
+
         boolean alreadyParticipate = session.getUsers().stream().anyMatch(o -> o.getId().equals(userId));
         if (alreadyParticipate) {
             throw new BadRequestException();
@@ -73,6 +78,8 @@ public class SessionService {
             throw new NotFoundException();
         }
 
+        assertRequestingUserIsSelf(userId);
+
         boolean alreadyParticipate = session.getUsers().stream().anyMatch(o -> o.getId().equals(userId));
         if (!alreadyParticipate) {
             throw new BadRequestException();
@@ -81,5 +88,12 @@ public class SessionService {
         session.setUsers(session.getUsers().stream().filter(u -> !u.getId().equals(userId)).collect(Collectors.toList()));
 
         this.sessionRepository.save(session);
+    }
+
+    private void assertRequestingUserIsSelf(Long userId) {
+        UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (!userDetails.getId().equals(userId)) {
+            throw new ForbiddenException();
+        }
     }
 }
