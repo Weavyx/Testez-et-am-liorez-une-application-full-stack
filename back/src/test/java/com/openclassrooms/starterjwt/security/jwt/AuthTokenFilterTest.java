@@ -56,4 +56,25 @@ class AuthTokenFilterTest {
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
         verify(filterChain).doFilter(request, response);
     }
+
+    @Test
+    void should_notAuthenticate_and_continueChain_when_authorizationHeaderIsPresentButNotBearerPrefixed() throws Exception {
+        when(request.getHeader("Authorization")).thenReturn("Basic dXNlcjpwYXNz");
+
+        authTokenFilter.doFilterInternal(request, response, filterChain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        verify(filterChain).doFilter(request, response);
+    }
+
+    @Test
+    void should_notAuthenticate_and_continueChain_when_tokenIsPresentButInvalid() throws Exception {
+        when(request.getHeader("Authorization")).thenReturn("Bearer invalid-token");
+        when(jwtUtils.validateJwtToken("invalid-token")).thenReturn(false);
+
+        authTokenFilter.doFilterInternal(request, response, filterChain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        verify(filterChain).doFilter(request, response);
+    }
 }
