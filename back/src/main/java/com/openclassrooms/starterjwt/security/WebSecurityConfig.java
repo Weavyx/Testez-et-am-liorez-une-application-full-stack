@@ -1,6 +1,5 @@
 package com.openclassrooms.starterjwt.security;
 
-import com.openclassrooms.starterjwt.security.jwt.AuthEntryPointJwt;
 import com.openclassrooms.starterjwt.security.jwt.AuthTokenFilter;
 import com.openclassrooms.starterjwt.security.services.UserDetailsServiceImpl;
 import jakarta.servlet.http.HttpServletResponse;

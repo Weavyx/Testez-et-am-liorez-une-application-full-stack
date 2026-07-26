@@ -1,18 +1,28 @@
 package com.openclassrooms.starterjwt.services;
 
 import com.openclassrooms.starterjwt.exception.BadRequestException;
+import com.openclassrooms.starterjwt.exception.ForbiddenException;
 import com.openclassrooms.starterjwt.exception.NotFoundException;
-import com.openclassrooms.starterjwt.exception.UnauthorizedException;
+import com.openclassrooms.starterjwt.models.Session;
 import com.openclassrooms.starterjwt.models.User;
+import com.openclassrooms.starterjwt.repository.SessionRepository;
 import com.openclassrooms.starterjwt.repository.UserRepository;
+import com.openclassrooms.starterjwt.security.services.UserDetailsImpl;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -30,46 +40,124 @@ class UserServiceTest {
     private UserRepository userRepository;
 
     @Mock
+    private SessionRepository sessionRepository;
+
+    @Mock
     private PasswordEncoder passwordEncoder;
 
     @InjectMocks
     private UserService userService;
 
+    /**
+     * findOwnProfile() lit l'utilisateur authentifié via SecurityContextHolder
+     * (contrôle de propriété en couche service, même pattern que SessionService).
+     * Le contexte est nettoyé après chaque test pour ne pas fuiter d'une méthode
+     * de test à l'autre — SecurityContextHolder est un ThreadLocal.
+     */
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
+
+    private void authenticateAs(Long userId) {
+        UserDetailsImpl userDetails = UserDetailsImpl.builder()
+                .id(userId).username("user" + userId + "@studio.com").build();
+        Authentication authentication =
+                new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+    }
+
     @Test
-    void should_deleteUser_when_deleteIsCalled() {
-        userService.delete(1L);
+    void should_deleteUser_when_deleteByIdIsCalled_and_requesterIsTheOwner() {
+        authenticateAs(1L);
+        User user = User.builder().id(1L).email("owner@studio.com").firstName("Jean").lastName("Dupont")
+                .password("encodedPassword").admin(false).build();
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        userService.deleteById(1L);
 
         verify(userRepository).deleteById(1L);
     }
 
     @Test
-    void should_deleteUser_when_deleteByIdIsCalled_and_currentUsernameMatchesUserEmail() {
+    void should_throwForbiddenException_when_deleteByIdIsCalled_and_requesterIsNotTheOwner() {
+        // L'intrus est authentifié sous un id DIFFÉRENT (2) de la cible (1). Son
+        // email diffère aussi, mais c'est bien l'id qui est comparé désormais.
+        authenticateAs(2L);
         User user = User.builder().id(1L).email("owner@studio.com").firstName("Jean").lastName("Dupont")
                 .password("encodedPassword").admin(false).build();
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
 
-        userService.deleteById(1L, "owner@studio.com");
-
-        verify(userRepository).deleteById(1L);
-    }
-
-    @Test
-    void should_throwUnauthorizedException_when_deleteByIdIsCalled_and_currentUsernameDoesNotMatchUserEmail() {
-        User user = User.builder().id(1L).email("owner@studio.com").firstName("Jean").lastName("Dupont")
-                .password("encodedPassword").admin(false).build();
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-
-        assertThatThrownBy(() -> userService.deleteById(1L, "intruder@studio.com"))
-                .isInstanceOf(UnauthorizedException.class);
+        assertThatThrownBy(() -> userService.deleteById(1L))
+                .isInstanceOf(ForbiddenException.class);
 
         verify(userRepository, never()).deleteById(any());
+        verify(sessionRepository, never()).save(any());
+    }
+
+    @Test
+    void should_throwForbiddenException_when_deleteByIdIsCalled_and_onlyTheEmailMatches() {
+        // Garde-fou de la bascule email -> id : l'appelant porte le MÊME email que
+        // la cible mais un id différent. L'ancienne comparaison par email aurait
+        // autorisé la suppression ; la comparaison par id la refuse.
+        UserDetailsImpl intruder = UserDetailsImpl.builder().id(2L).username("owner@studio.com").build();
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(intruder, null, intruder.getAuthorities()));
+        User target = User.builder().id(1L).email("owner@studio.com").firstName("Jean").lastName("Dupont")
+                .password("encodedPassword").admin(false).build();
+        when(userRepository.findById(1L)).thenReturn(Optional.of(target));
+
+        assertThatThrownBy(() -> userService.deleteById(1L))
+                .isInstanceOf(ForbiddenException.class);
+
+        verify(userRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void should_removeUserFromParticipatedSessions_when_deleteByIdIsCalled() {
+        authenticateAs(1L);
+        User owner = User.builder().id(1L).email("owner@studio.com").firstName("Jean").lastName("Dupont")
+                .password("encodedPassword").admin(false).build();
+        User other = User.builder().id(2L).email("other@studio.com").firstName("Paul").lastName("Martin")
+                .password("encodedPassword").admin(false).build();
+        Session participated = Session.builder().id(10L).name("Hatha")
+                .users(new ArrayList<>(Arrays.asList(owner, other))).build();
+        Session notParticipated = Session.builder().id(11L).name("Ashtanga")
+                .users(new ArrayList<>(List.of(other))).build();
+        when(userRepository.findById(1L)).thenReturn(Optional.of(owner));
+        when(sessionRepository.findAll()).thenReturn(Arrays.asList(participated, notParticipated));
+
+        userService.deleteById(1L);
+
+        // Seule la session à laquelle il participait est réécrite, sans lui,
+        // et les autres participants sont conservés.
+        ArgumentCaptor<Session> sessionCaptor = ArgumentCaptor.forClass(Session.class);
+        verify(sessionRepository, times(1)).save(sessionCaptor.capture());
+        assertThat(sessionCaptor.getValue().getId()).isEqualTo(10L);
+        assertThat(sessionCaptor.getValue().getUsers()).extracting(User::getId).containsExactly(2L);
+        verify(userRepository).deleteById(1L);
+    }
+
+    @Test
+    void should_notTouchAnySession_when_deleteByIdIsCalled_and_userParticipatesInNone() {
+        authenticateAs(1L);
+        User owner = User.builder().id(1L).email("owner@studio.com").firstName("Jean").lastName("Dupont")
+                .password("encodedPassword").admin(false).build();
+        Session sessionWithNullUsers = Session.builder().id(10L).name("Hatha").users(null).build();
+        when(userRepository.findById(1L)).thenReturn(Optional.of(owner));
+        when(sessionRepository.findAll()).thenReturn(List.of(sessionWithNullUsers));
+
+        userService.deleteById(1L);
+
+        verify(sessionRepository, never()).save(any());
+        verify(userRepository).deleteById(1L);
     }
 
     @Test
     void should_throwNotFoundException_when_deleteByIdIsCalled_and_userDoesNotExist() {
         when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> userService.deleteById(99L, "owner@studio.com"))
+        assertThatThrownBy(() -> userService.deleteById(99L))
                 .isInstanceOf(NotFoundException.class);
 
         verify(userRepository, never()).deleteById(any());
@@ -92,6 +180,52 @@ class UserServiceTest {
 
         assertThatThrownBy(() -> userService.findById(99L))
                 .isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void should_returnUser_when_findOwnProfileIsCalled_and_requesterIsTheOwner() {
+        authenticateAs(1L);
+        User user = User.builder().id(1L).email("owner@studio.com").firstName("Jean").lastName("Dupont")
+                .password("encodedPassword").admin(false).build();
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        User result = userService.findOwnProfile(1L);
+
+        assertThat(result).isEqualTo(user);
+    }
+
+    @Test
+    void should_throwForbiddenException_when_findOwnProfileIsCalled_and_requesterIsNotTheOwner() {
+        authenticateAs(2L);
+        User user = User.builder().id(1L).email("owner@studio.com").firstName("Jean").lastName("Dupont")
+                .password("encodedPassword").admin(false).build();
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> userService.findOwnProfile(1L))
+                .isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test
+    void should_throwNotFoundException_when_findOwnProfileIsCalled_and_userDoesNotExist() {
+        when(userRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> userService.findOwnProfile(99L))
+                .isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void should_returnUser_when_findByIdIsCalled_and_requesterIsAnotherUser() {
+        // findById() reste une lecture technique SANS contrôle de propriété :
+        // SessionMapper l'appelle pour résoudre les participants d'une session
+        // (mapping déclenché par un admin sur POST/PUT /api/session). Y ajouter
+        // le contrôle casserait ce mapping — d'où la méthode findOwnProfile()
+        // distincte pour l'exposition API.
+        authenticateAs(2L);
+        User user = User.builder().id(1L).email("owner@studio.com").firstName("Jean").lastName("Dupont")
+                .password("encodedPassword").admin(false).build();
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        assertThat(userService.findById(1L)).isEqualTo(user);
     }
 
     @Test
@@ -161,17 +295,6 @@ class UserServiceTest {
         boolean result = userService.isAdmin("unknown@studio.com");
 
         assertThat(result).isFalse();
-    }
-
-    @Test
-    void should_returnSavedUser_when_saveIsCalled() {
-        User user = User.builder().id(1L).email("yoga@studio.com").firstName("Jean").lastName("Dupont")
-                .password("encodedPassword").admin(false).build();
-        when(userRepository.save(user)).thenReturn(user);
-
-        User result = userService.save(user);
-
-        assertThat(result).isEqualTo(user);
     }
 
     @Test

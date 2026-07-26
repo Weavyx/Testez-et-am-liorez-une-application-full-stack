@@ -4,8 +4,6 @@ import com.openclassrooms.starterjwt.mapper.UserMapper;
 import com.openclassrooms.starterjwt.models.User;
 import com.openclassrooms.starterjwt.services.UserService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -27,14 +25,13 @@ public class UserController {
 
     @GetMapping("/{id}")
     public ResponseEntity<?> findById(@PathVariable("id") String id) {
-        User user = this.userService.findById(Long.valueOf(id));
+        User user = this.userService.findOwnProfile(Long.valueOf(id));
         return ResponseEntity.ok().body(this.userMapper.toDto(user));
     }
 
     @DeleteMapping("{id}")
     public ResponseEntity<?> save(@PathVariable("id") String id) {
-        UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        this.userService.deleteById(Long.parseLong(id), userDetails.getUsername());
+        this.userService.deleteById(Long.parseLong(id));
         return ResponseEntity.ok().build();
     }
 }
