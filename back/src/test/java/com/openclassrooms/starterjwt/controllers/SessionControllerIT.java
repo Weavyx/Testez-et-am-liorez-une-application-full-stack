@@ -7,6 +7,9 @@ import com.openclassrooms.starterjwt.models.User;
 import com.openclassrooms.starterjwt.repository.SessionRepository;
 import com.openclassrooms.starterjwt.repository.TeacherRepository;
 import com.openclassrooms.starterjwt.repository.UserRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.Query;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -18,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -58,6 +62,9 @@ class SessionControllerIT extends AbstractIntegrationTest {
 
     @Autowired
     private UserRepository userRepository;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     private Teacher persistTeacher() {
         return teacherRepository.save(Teacher.builder()
@@ -373,6 +380,44 @@ class SessionControllerIT extends AbstractIntegrationTest {
 
         mockMvc.perform(delete("/api/session/{id}", session.getId()))
                 .andExpect(status().isUnauthorized());
+    }
+
+    // Vérifié manuellement (Postman) : la suppression d'une session à laquelle des
+    // utilisateurs sont inscrits réussit et la table de jointure PARTICIPATE est
+    // nettoyée automatiquement par Hibernate (association @ManyToMany propriétaire
+    // côté Session), sans CascadeType explicite ni code applicatif dédié — voir
+    // AUDIT_PHASE4_POINTS_RESTANTS.md. Ce comportement n'était couvert par aucun
+    // test avant ce cas ; il verrouille le pendant "session" du cas symétrique
+    // côté compte utilisateur (delete_returns200AndClearsParticipations_when...
+    // dans UserControllerIT).
+    @Test
+    void delete_returns200AndClearsParticipations_whenSessionHasParticipants() throws Exception {
+        Teacher teacher = persistTeacher();
+        Session session = persistSession(teacher);
+        User participant = persistParticipant();
+        session.getUsers().add(participant);
+        sessionRepository.save(session);
+        String token = generateAdminUserToken();
+
+        Long participateCountBefore = countParticipateRowsForSession(session.getId());
+        assertThat(participateCountBefore).isEqualTo(1L);
+
+        mockMvc.perform(delete("/api/session/{id}", session.getId())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
+
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(sessionRepository.existsById(session.getId())).isFalse();
+        assertThat(countParticipateRowsForSession(session.getId())).isZero();
+    }
+
+    private Long countParticipateRowsForSession(Long sessionId) {
+        Query query = entityManager.createNativeQuery(
+                "SELECT COUNT(*) FROM participate WHERE session_id = :sessionId");
+        query.setParameter("sessionId", sessionId);
+        return ((Number) query.getSingleResult()).longValue();
     }
 
     // ---------- POST /api/session/{id}/participate/{userId} ----------
