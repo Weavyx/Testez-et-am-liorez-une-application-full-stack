@@ -27,13 +27,15 @@ import { FormComponent } from './form.component';
  *   - Session form : validation du formulaire (bouton submit activé/désactivé)
  *   - Session form : protection de la route pour un utilisateur non-admin
  *
- * Répartition des tests (méthodologie stricte du projet) :
- *   - INTÉGRATION = le test lit lui-même le DOM réellement rendu.
- *   - UNITAIRE = tout le reste, y compris les tests qui vérifient le contrat
- *     HTTP réel (URL/verbe/payload) via HttpTestingController — ce dernier
- *     mocke le backend, aucun réseau ni serveur réel n'est impliqué — même
- *     si TestBed/fixture servent de plomberie (instanciation) sans
- *     assertion sur ce qu'ils produisent.
+ * Répartition des tests (méthodologie stricte du projet, cf. METHODE_AUDIT.md
+ * — note « HttpTestingController et la notion d'intégration ») :
+ *   - INTÉGRATION = le test lit le DOM réellement rendu, OU vérifie une
+ *     requête HTTP via HttpTestingController (coordination réelle
+ *     composant/service jusqu'à la construction de la requête, sans mock
+ *     intermédiaire — seul le transport final est intercepté), même sans
+ *     assertion sur le DOM rendu.
+ *   - UNITAIRE = appel de méthode isolée + assertion sur une propriété de
+ *     classe, sans passer par HttpTestingController.
  *
  * La structure fonctionnelle existante (Create mode / Non-admin user /
  * Edit mode) est conservée ; le classement unitaire/intégration est

@@ -13,16 +13,19 @@ import { User } from '../models/user.interface';
  *   - Récupération des informations utilisateur (getById)
  *   - Suppression du compte utilisateur (delete)
  *
- * Répartition des tests (méthodologie stricte du projet) :
- *   - INTÉGRATION = le test lit lui-même le DOM réellement rendu.
- *   - UNITAIRE = tout le reste, y compris les tests qui vérifient le contrat
- *     HTTP réel (URL/verbe/payload) via HttpTestingController — ce dernier
- *     mocke le backend, aucun réseau ni serveur réel n'est impliqué — même
- *     si TestBed sert de simple plomberie.
+ * Répartition des tests (méthodologie stricte du projet, cf. METHODE_AUDIT.md
+ * — note « HttpTestingController et la notion d'intégration ») :
+ *   - INTÉGRATION = le test lit le DOM réellement rendu, OU vérifie une
+ *     requête HTTP via HttpTestingController (coordination réelle
+ *     service/HTTP jusqu'à la construction de la requête, sans mock
+ *     intermédiaire — seul le transport final est intercepté), même sans
+ *     assertion sur le DOM rendu.
+ *   - UNITAIRE = appel de méthode isolée + assertion sur une propriété de
+ *     classe, sans passer par HttpTestingController.
  *
- * Service pur, sans DOM : tous les tests ci-dessous sont donc UNITAIRES,
- * y compris ceux qui vérifient le contrat HTTP (URL, verbe, payload) via
- * HttpTestingController.
+ * Service pur, sans DOM : tous les tests ci-dessous sont donc des tests
+ * D'INTÉGRATION au sens de ce critère, car ils vérifient le contrat HTTP
+ * (URL, verbe, payload) via HttpTestingController.
  */
 describe('UserService', () => {
   let service: UserService;
