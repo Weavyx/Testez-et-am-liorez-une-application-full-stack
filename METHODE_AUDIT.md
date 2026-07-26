@@ -88,6 +88,30 @@ Tableau de tous les tests existants : fichier, describe/classe, nom, câblage d�
 
 **Piège classique à vérifier** : `@WebMvcTest` + `@MockBean(Service)` ressemble à un test d'intégration (contexte Spring, MockMvc, JSON) mais n'intègre rien — c'est un test unitaire du controller avec sérialisation HTTP. À reclasser si trouvé.
 
+### Note méthodologique — HttpTestingController et la notion d'« intégration »
+
+Deux lectures coexistent dans la doctrine Angular sur le statut d'un test utilisant
+`HttpTestingController` :
+
+1. **Lecture stricte (majoritaire)** : `HttpTestingController` remplace la couche
+   transport, aucun appel réseau réel n'a lieu → le test reste *unitaire*. Le vrai
+   test d'intégration, dans cette lecture, est celui qui fait un appel réseau réel
+   vers un serveur de test dédié.
+2. **Lecture par profondeur de coordination** (retenue dans ce document) : ce qui
+   définit l'intégration n'est pas la présence du réseau réel, mais la coordination
+   réelle de plusieurs collaborateurs (composant, service, construction de la
+   requête HTTP) sans mock intermédiaire — seul le transport final est intercepté.
+   Cette lecture s'aligne sur le modèle *Testing Trophy* (privilégier les tests
+   d'intégration à la coordination réelle, réserver le mock aux cas où aucune
+   autre option n'existe).
+
+**Ce projet retient la lecture 2**, choix assumé et documenté ici plutôt qu'implicite :
+un test via `HttpTestingController` est classé *intégration* dès lors qu'il exerce
+un composant ou un service réel jusqu'à la construction de la requête, même sans
+assertion sur le DOM rendu. Un test qui mocke directement le service (sans passer
+par `HttpTestingController`) reste unitaire, de même qu'un test qui n'exerce qu'une
+méthode isolée avec assertion sur une propriété de classe.
+
 Sortie attendue : trois colonnes — classement déclaré (nom/dossier) · classement réel · écart. Seuls les écarts remontent à arbitrage.
 
 **⚠️ Deux pièges à vérifier avant tout renommage :**
