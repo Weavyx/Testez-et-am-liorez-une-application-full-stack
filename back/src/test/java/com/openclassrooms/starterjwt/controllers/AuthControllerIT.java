@@ -140,6 +140,19 @@ class AuthControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.message").value("Error: password size must be between 6 and 40"));
     }
 
+    // Preuve que handleMethodArgumentNotValidException agrège TOUTES les erreurs de
+    // champ, pas seulement la première : email vide ET password trop court sont
+    // toutes deux invalides ici, les deux doivent apparaître dans le message.
+    @Test
+    void register_returns400AndListsAllFieldErrors_whenMultipleFieldsAreInvalid() throws Exception {
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(signupJson("", "Jean", "Dupont", "abc")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("email must not be blank")))
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("password size must be between 6 and 40")));
+    }
+
     // ---------- POST /api/auth/login ----------
 
     @Test
