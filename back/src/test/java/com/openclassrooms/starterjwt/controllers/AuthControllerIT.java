@@ -13,7 +13,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 
 import java.util.UUID;
 
@@ -116,57 +115,29 @@ class AuthControllerIT extends AbstractIntegrationTest {
 
     @Test
     void register_returns400_whenEmailIsBlank() throws Exception {
-        // Le corps de la réponse 400 est vide : MethodArgumentNotValidException n'est
-        // interceptée par aucun @ExceptionHandler applicatif (GlobalExceptionHandler ne
-        // gère que BadRequestException/NotFoundException/ForbiddenException/NumberFormatException),
-        // donc jsonPath("$.message") n'est pas disponible ici. On distingue ce test des deux
-        // suivants en assertant directement sur l'erreur de champ résolue par Spring, ce qui
-        // isole précisément la règle de validation violée (NotBlank sur email) plutôt que de se
-        // contenter d'un 400 indistinguable de n'importe quelle autre cause.
-        MvcResult result = mockMvc.perform(post("/api/auth/register")
+        mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(signupJson("", "Jean", "Dupont", "password123")))
                 .andExpect(status().isBadRequest())
-                .andReturn();
-
-        MethodArgumentNotValidException exception = (MethodArgumentNotValidException) result.getResolvedException();
-        assertThat(exception).isNotNull();
-        assertThat(exception.getBindingResult().getFieldError("email"))
-                .isNotNull()
-                .extracting(org.springframework.validation.FieldError::getCode)
-                .isEqualTo("NotBlank");
+                .andExpect(jsonPath("$.message").value("Error: email must not be blank"));
     }
 
     @Test
     void register_returns400_whenEmailFormatIsInvalid() throws Exception {
-        MvcResult result = mockMvc.perform(post("/api/auth/register")
+        mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(signupJson("not-an-email", "Jean", "Dupont", "password123")))
                 .andExpect(status().isBadRequest())
-                .andReturn();
-
-        MethodArgumentNotValidException exception = (MethodArgumentNotValidException) result.getResolvedException();
-        assertThat(exception).isNotNull();
-        assertThat(exception.getBindingResult().getFieldError("email"))
-                .isNotNull()
-                .extracting(org.springframework.validation.FieldError::getCode)
-                .isEqualTo("Email");
+                .andExpect(jsonPath("$.message").value("Error: email must be a well-formed email address"));
     }
 
     @Test
     void register_returns400_whenPasswordIsTooShort() throws Exception {
-        MvcResult result = mockMvc.perform(post("/api/auth/register")
+        mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(signupJson(uniqueEmail("short-pwd"), "Jean", "Dupont", "abc")))
                 .andExpect(status().isBadRequest())
-                .andReturn();
-
-        MethodArgumentNotValidException exception = (MethodArgumentNotValidException) result.getResolvedException();
-        assertThat(exception).isNotNull();
-        assertThat(exception.getBindingResult().getFieldError("password"))
-                .isNotNull()
-                .extracting(org.springframework.validation.FieldError::getCode)
-                .isEqualTo("Size");
+                .andExpect(jsonPath("$.message").value("Error: password size must be between 6 and 40"));
     }
 
     // ---------- POST /api/auth/login ----------
