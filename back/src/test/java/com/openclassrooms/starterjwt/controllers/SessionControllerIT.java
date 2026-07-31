@@ -22,6 +22,8 @@ import java.util.Date;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -126,6 +128,8 @@ class SessionControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.name").value("Hatha Yoga"))
                 .andExpect(jsonPath("$.description").value("Séance découverte"))
                 .andExpect(jsonPath("$.teacher_id").value(teacher.getId()))
+                .andExpect(jsonPath("$.date").isNotEmpty())
+                .andExpect(jsonPath("$.users", hasSize(0)))
                 .andExpect(jsonPath("$.createdAt").isNotEmpty())
                 .andExpect(jsonPath("$.updatedAt").isNotEmpty());
     }
@@ -168,7 +172,10 @@ class SessionControllerIT extends AbstractIntegrationTest {
         mockMvc.perform(get("/api/session")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(2)));
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[*].id", containsInAnyOrder(
+                        session1.getId().intValue(), session2.getId().intValue())))
+                .andExpect(jsonPath("$[*].name", containsInAnyOrder("Hatha Yoga", "Hatha Yoga")));
     }
 
     @Test
@@ -190,7 +197,10 @@ class SessionControllerIT extends AbstractIntegrationTest {
                         .content(validSessionJson(teacher.getId())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Hatha Yoga"))
-                .andExpect(jsonPath("$.teacher_id").value(teacher.getId()));
+                .andExpect(jsonPath("$.description").value("Séance découverte"))
+                .andExpect(jsonPath("$.teacher_id").value(teacher.getId()))
+                .andExpect(jsonPath("$.date", containsString("2026-08-01")))
+                .andExpect(jsonPath("$.users", hasSize(0)));
     }
 
     // Preuve du fix : un utilisateur authentifié mais non-admin ne peut pas créer de session.
@@ -241,7 +251,12 @@ class SessionControllerIT extends AbstractIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(validSessionJson(teacher.getId())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(session.getId()));
+                .andExpect(jsonPath("$.id").value(session.getId()))
+                .andExpect(jsonPath("$.name").value("Hatha Yoga"))
+                .andExpect(jsonPath("$.description").value("Séance découverte"))
+                .andExpect(jsonPath("$.teacher_id").value(teacher.getId()))
+                .andExpect(jsonPath("$.date", containsString("2026-08-01")))
+                .andExpect(jsonPath("$.users", hasSize(0)));
     }
 
     // Preuve du fix : un utilisateur authentifié mais non-admin ne peut pas modifier de session.
