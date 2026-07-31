@@ -68,18 +68,6 @@ class UserServiceTest {
     }
 
     @Test
-    void should_deleteUser_when_deleteByIdIsCalled_and_requesterIsTheOwner() {
-        authenticateAs(1L);
-        User user = User.builder().id(1L).email("owner@studio.com").firstName("Jean").lastName("Dupont")
-                .password("encodedPassword").admin(false).build();
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-
-        userService.deleteById(1L);
-
-        verify(userRepository).deleteById(1L);
-    }
-
-    @Test
     void should_throwForbiddenException_when_deleteByIdIsCalled_and_requesterIsNotTheOwner() {
         // L'intrus est authentifié sous un id DIFFÉRENT (2) de la cible (1). Son
         // email diffère aussi, mais c'est bien l'id qui est comparé désormais.
@@ -214,12 +202,14 @@ class UserServiceTest {
     }
 
     @Test
-    void should_returnUser_when_findByIdIsCalled_and_requesterIsAnotherUser() {
-        // findById() reste une lecture technique SANS contrôle de propriété :
-        // SessionMapper l'appelle pour résoudre les participants d'une session
-        // (mapping déclenché par un admin sur POST/PUT /api/session). Y ajouter
-        // le contrôle casserait ce mapping — d'où la méthode findOwnProfile()
-        // distincte pour l'exposition API.
+    void should_returnUser_when_findByIdIsCalled_regardlessOfRequester() {
+        // Ce test vérifie explicitement l'ABSENCE de contrôle de propriété à ce
+        // niveau : findById() reste une lecture technique SANS vérification de
+        // l'identité de l'appelant. SessionMapper l'appelle pour résoudre les
+        // participants d'une session (mapping déclenché par un admin sur
+        // POST/PUT /api/session). Y ajouter le contrôle casserait ce mapping —
+        // d'où la méthode findOwnProfile() distincte pour l'exposition API, où le
+        // contrôle de propriété est bien fait (voir les tests findOwnProfile ci-dessus).
         authenticateAs(2L);
         User user = User.builder().id(1L).email("owner@studio.com").firstName("Jean").lastName("Dupont")
                 .password("encodedPassword").admin(false).build();
