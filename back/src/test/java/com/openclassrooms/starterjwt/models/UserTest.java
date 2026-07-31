@@ -73,6 +73,10 @@ class UserTest {
                 .contains("John");
     }
 
+    // Ce test vérifie le fonctionnement des setters/getters générés par Lombok
+    // plus qu'une logique métier propre à User : valeur faible mais non nulle,
+    // il détecte une régression de configuration Lombok (ex. @Data retiré ou
+    // mal configuré sur un champ).
     @Test
     void should_assignAllFields_when_settersAreCalled() {
         User user = new User();
@@ -187,6 +191,10 @@ class UserTest {
                 .updatedAt(now)
                 .toString();
 
-        assertThat(builderToString).contains("a@studio.com");
+        assertThat(builderToString)
+                .contains("a@studio.com")
+                .contains("Doe")
+                .contains("John")
+                .contains("admin=false");
     }
 }

@@ -3,7 +3,6 @@ package com.openclassrooms.starterjwt.models;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.Date;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -64,6 +63,10 @@ class SessionTest {
         assertThat(session1.equals(session2)).isFalse();
     }
 
+    // Ce test vérifie le fonctionnement des setters/getters générés par Lombok
+    // plus qu'une logique métier propre à Session : valeur faible mais non nulle,
+    // il détecte une régression de configuration Lombok (ex. @Data retiré ou
+    // mal configuré sur un champ).
     @Test
     void should_assignAllFields_when_settersAreCalled() {
         Session session = new Session();
@@ -91,9 +94,12 @@ class SessionTest {
         String builderToString = Session.builder()
                 .id(1L)
                 .name("Yoga du soir")
-                .users(Collections.emptyList())
+                .description("Une séance relaxante")
                 .toString();
 
-        assertThat(builderToString).contains("Yoga du soir");
+        assertThat(builderToString)
+                .contains("id=1")
+                .contains("Yoga du soir")
+                .contains("Une séance relaxante");
     }
 }

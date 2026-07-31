@@ -62,6 +62,10 @@ class TeacherTest {
         assertThat(teacher1.equals(teacher2)).isFalse();
     }
 
+    // Ce test vérifie le fonctionnement des setters/getters générés par Lombok
+    // plus qu'une logique métier propre à Teacher : valeur faible mais non nulle,
+    // il détecte une régression de configuration Lombok (ex. @Data retiré ou
+    // mal configuré sur un champ).
     @Test
     void should_assignAllFields_when_settersAreCalled() {
         Teacher teacher = new Teacher();
@@ -91,6 +95,9 @@ class TeacherTest {
                 .updatedAt(now)
                 .toString();
 
-        assertThat(builderToString).contains("Doe");
+        assertThat(builderToString)
+                .contains("Doe")
+                .contains("John")
+                .contains("id=1");
     }
 }
