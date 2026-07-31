@@ -113,8 +113,12 @@ class JwtUtilsTest {
     }
 
     @Test
-    void should_returnFalse_when_validateJwtTokenIsCalled_with_nullOrEmptyToken() {
+    void should_returnFalse_when_validateJwtTokenIsCalled_with_nullToken() {
         assertThat(jwtUtils.validateJwtToken(null)).isFalse();
+    }
+
+    @Test
+    void should_returnFalse_when_validateJwtTokenIsCalled_with_emptyToken() {
         assertThat(jwtUtils.validateJwtToken("")).isFalse();
     }
 }

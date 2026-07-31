@@ -36,6 +36,13 @@ class UserTest {
         User user2 = User.builder().id(1L).email("b@studio.com").lastName("B").firstName("B").password("other").admin(true).build();
 
         assertThat(user1.equals(user2)).isTrue();
+    }
+
+    @Test
+    void should_returnSameHashCode_when_idsAreEqual_and_differentOtherFields() {
+        User user1 = User.builder().id(1L).email("a@studio.com").lastName("A").firstName("A").password("pwd").admin(false).build();
+        User user2 = User.builder().id(1L).email("b@studio.com").lastName("B").firstName("B").password("other").admin(true).build();
+
         assertThat(user1.hashCode()).isEqualTo(user2.hashCode());
     }
 
@@ -73,6 +80,10 @@ class UserTest {
                 .contains("John");
     }
 
+    // Ce test vérifie le fonctionnement des setters/getters générés par Lombok
+    // plus qu'une logique métier propre à User : valeur faible mais non nulle,
+    // il détecte une régression de configuration Lombok (ex. @Data retiré ou
+    // mal configuré sur un champ).
     @Test
     void should_assignAllFields_when_settersAreCalled() {
         User user = new User();
@@ -150,25 +161,25 @@ class UserTest {
     }
 
     @Test
-    void should_throwNullPointerException_when_builderBuildIsCalled_and_emailIsNull() {
+    void should_throwNullPointerException_when_builderFieldIsSetToNull_and_emailIsNull() {
         assertThatNullPointerException()
                 .isThrownBy(() -> User.builder().email(null));
     }
 
     @Test
-    void should_throwNullPointerException_when_builderBuildIsCalled_and_lastNameIsNull() {
+    void should_throwNullPointerException_when_builderFieldIsSetToNull_and_lastNameIsNull() {
         assertThatNullPointerException()
                 .isThrownBy(() -> User.builder().lastName(null));
     }
 
     @Test
-    void should_throwNullPointerException_when_builderBuildIsCalled_and_firstNameIsNull() {
+    void should_throwNullPointerException_when_builderFieldIsSetToNull_and_firstNameIsNull() {
         assertThatNullPointerException()
                 .isThrownBy(() -> User.builder().firstName(null));
     }
 
     @Test
-    void should_throwNullPointerException_when_builderBuildIsCalled_and_passwordIsNull() {
+    void should_throwNullPointerException_when_builderFieldIsSetToNull_and_passwordIsNull() {
         assertThatNullPointerException()
                 .isThrownBy(() -> User.builder().password(null));
     }
@@ -187,6 +198,10 @@ class UserTest {
                 .updatedAt(now)
                 .toString();
 
-        assertThat(builderToString).contains("a@studio.com");
+        assertThat(builderToString)
+                .contains("a@studio.com")
+                .contains("Doe")
+                .contains("John")
+                .contains("admin=false");
     }
 }

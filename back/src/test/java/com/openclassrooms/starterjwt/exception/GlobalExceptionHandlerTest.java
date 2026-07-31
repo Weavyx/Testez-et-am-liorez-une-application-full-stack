@@ -1,6 +1,8 @@
 package com.openclassrooms.starterjwt.exception;
 
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
@@ -10,17 +12,11 @@ class GlobalExceptionHandlerTest {
 
     private final GlobalExceptionHandler handler = new GlobalExceptionHandler();
 
-    @Test
-    void should_returnBadRequestWithoutBody_when_handleBadRequestExceptionIsCalled_and_messageIsNull() {
-        ResponseEntity<?> response = handler.handleBadRequestException(new BadRequestException());
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(response.getBody()).isNull();
-    }
-
-    @Test
-    void should_returnBadRequestWithoutBody_when_handleBadRequestExceptionIsCalled_and_messageIsBlank() {
-        ResponseEntity<?> response = handler.handleBadRequestException(new BadRequestException("   "));
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"   "})
+    void should_returnBadRequestWithoutBody_when_handleBadRequestExceptionIsCalled_and_messageIsNullOrBlank(String message) {
+        ResponseEntity<?> response = handler.handleBadRequestException(new BadRequestException(message));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response.getBody()).isNull();

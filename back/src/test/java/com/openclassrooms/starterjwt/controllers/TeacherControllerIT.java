@@ -106,9 +106,13 @@ class TeacherControllerIT extends AbstractIntegrationTest {
         mockMvc.perform(get("/api/teacher")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
+                // hasSize(2) suppose la table vide en entrée de test : vrai ici grâce au
+                // rollback @Transactional entre tests (aucun data.sql sous src/test/resources).
                 .andExpect(jsonPath("$", hasSize(2)))
                 .andExpect(jsonPath("$[*].id", containsInAnyOrder(
-                        teacher1.getId().intValue(), teacher2.getId().intValue())));
+                        teacher1.getId().intValue(), teacher2.getId().intValue())))
+                .andExpect(jsonPath("$[*].firstName", containsInAnyOrder("Margot", "Hélène")))
+                .andExpect(jsonPath("$[*].lastName", containsInAnyOrder("Delahaye", "Thiercelin")));
     }
 
     @Test

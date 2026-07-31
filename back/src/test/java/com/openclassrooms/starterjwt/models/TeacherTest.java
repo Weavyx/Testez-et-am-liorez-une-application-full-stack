@@ -35,6 +35,13 @@ class TeacherTest {
         Teacher teacher2 = Teacher.builder().id(1L).lastName("Smith").firstName("Jane").build();
 
         assertThat(teacher1.equals(teacher2)).isTrue();
+    }
+
+    @Test
+    void should_returnSameHashCode_when_idsAreEqual_and_differentOtherFields() {
+        Teacher teacher1 = Teacher.builder().id(1L).lastName("Doe").firstName("John").build();
+        Teacher teacher2 = Teacher.builder().id(1L).lastName("Smith").firstName("Jane").build();
+
         assertThat(teacher1.hashCode()).isEqualTo(teacher2.hashCode());
     }
 
@@ -62,6 +69,10 @@ class TeacherTest {
         assertThat(teacher1.equals(teacher2)).isFalse();
     }
 
+    // Ce test vérifie le fonctionnement des setters/getters générés par Lombok
+    // plus qu'une logique métier propre à Teacher : valeur faible mais non nulle,
+    // il détecte une régression de configuration Lombok (ex. @Data retiré ou
+    // mal configuré sur un champ).
     @Test
     void should_assignAllFields_when_settersAreCalled() {
         Teacher teacher = new Teacher();
@@ -91,6 +102,9 @@ class TeacherTest {
                 .updatedAt(now)
                 .toString();
 
-        assertThat(builderToString).contains("Doe");
+        assertThat(builderToString)
+                .contains("Doe")
+                .contains("John")
+                .contains("id=1");
     }
 }

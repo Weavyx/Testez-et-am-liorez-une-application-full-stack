@@ -55,12 +55,30 @@ class UserDetailsImplTest {
     }
 
     @Test
-    void should_returnTrue_forAllAccountStatusFlags() {
+    void should_returnTrue_when_isAccountNonExpiredIsCalled() {
         UserDetailsImpl userDetails = UserDetailsImpl.builder().id(1L).build();
 
         assertThat(userDetails.isAccountNonExpired()).isTrue();
+    }
+
+    @Test
+    void should_returnTrue_when_isAccountNonLockedIsCalled() {
+        UserDetailsImpl userDetails = UserDetailsImpl.builder().id(1L).build();
+
         assertThat(userDetails.isAccountNonLocked()).isTrue();
+    }
+
+    @Test
+    void should_returnTrue_when_isCredentialsNonExpiredIsCalled() {
+        UserDetailsImpl userDetails = UserDetailsImpl.builder().id(1L).build();
+
         assertThat(userDetails.isCredentialsNonExpired()).isTrue();
+    }
+
+    @Test
+    void should_returnTrue_when_isEnabledIsCalled() {
+        UserDetailsImpl userDetails = UserDetailsImpl.builder().id(1L).build();
+
         assertThat(userDetails.isEnabled()).isTrue();
     }
 

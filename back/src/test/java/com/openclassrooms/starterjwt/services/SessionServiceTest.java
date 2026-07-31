@@ -46,10 +46,11 @@ class SessionServiceTest {
     private SessionService sessionService;
 
     /**
-     * participate()/noLongerParticipate() lisent l'utilisateur authentifié via
-     * SecurityContextHolder (fix de contrôle de propriété) ; les tests existants
-     * appellent tous ces méthodes avec userId=10L, donc on authentifie par
-     * défaut ce même id ici pour ne pas avoir à modifier chaque test individuel.
+     * Tous les tests nominaux de cette classe appellent participate/noLongerParticipate
+     * avec userId=10L : ce défaut évite de répéter authenticateAs(10L) dans chaque
+     * test. Les tests qui vérifient un rejet 403 authentifient explicitement un
+     * autre id en première ligne (voir should_throwForbiddenException_when_participateIsCalled_...
+     * et should_throwForbiddenException_when_noLongerParticipateIsCalled_...).
      */
     @BeforeEach
     void authenticateAsUser10() {
@@ -127,7 +128,7 @@ class SessionServiceTest {
     }
 
     @Test
-    void should_returnNull_when_getByIdIsCalled_and_sessionDoesNotExist() {
+    void should_throwNotFoundException_when_getByIdIsCalled_and_sessionDoesNotExist() {
         when(sessionRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> sessionService.getById(99L))
