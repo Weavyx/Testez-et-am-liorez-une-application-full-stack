@@ -35,6 +35,13 @@ class TeacherTest {
         Teacher teacher2 = Teacher.builder().id(1L).lastName("Smith").firstName("Jane").build();
 
         assertThat(teacher1.equals(teacher2)).isTrue();
+    }
+
+    @Test
+    void should_returnSameHashCode_when_idsAreEqual_and_differentOtherFields() {
+        Teacher teacher1 = Teacher.builder().id(1L).lastName("Doe").firstName("John").build();
+        Teacher teacher2 = Teacher.builder().id(1L).lastName("Smith").firstName("Jane").build();
+
         assertThat(teacher1.hashCode()).isEqualTo(teacher2.hashCode());
     }
 

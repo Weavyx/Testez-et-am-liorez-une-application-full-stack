@@ -36,6 +36,13 @@ class SessionTest {
         Session session2 = Session.builder().id(1L).name("Pilates").description("B").build();
 
         assertThat(session1.equals(session2)).isTrue();
+    }
+
+    @Test
+    void should_returnSameHashCode_when_idsAreEqual_and_differentOtherFields() {
+        Session session1 = Session.builder().id(1L).name("Yoga").description("A").build();
+        Session session2 = Session.builder().id(1L).name("Pilates").description("B").build();
+
         assertThat(session1.hashCode()).isEqualTo(session2.hashCode());
     }
 

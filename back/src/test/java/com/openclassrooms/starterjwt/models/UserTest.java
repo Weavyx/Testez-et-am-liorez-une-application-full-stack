@@ -36,6 +36,13 @@ class UserTest {
         User user2 = User.builder().id(1L).email("b@studio.com").lastName("B").firstName("B").password("other").admin(true).build();
 
         assertThat(user1.equals(user2)).isTrue();
+    }
+
+    @Test
+    void should_returnSameHashCode_when_idsAreEqual_and_differentOtherFields() {
+        User user1 = User.builder().id(1L).email("a@studio.com").lastName("A").firstName("A").password("pwd").admin(false).build();
+        User user2 = User.builder().id(1L).email("b@studio.com").lastName("B").firstName("B").password("other").admin(true).build();
+
         assertThat(user1.hashCode()).isEqualTo(user2.hashCode());
     }
 

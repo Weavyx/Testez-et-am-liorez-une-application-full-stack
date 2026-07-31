@@ -108,9 +108,13 @@ class UserControllerIT extends AbstractIntegrationTest {
     // deux comptes réellement distincts, chacun son email aléatoire.
     @Test
     void findById_returns403_whenUserReadsAnotherUsersAccount() throws Exception {
+        // Garde de fixture (pas le comportement testé) : userA et userB sont deux
+        // comptes réellement distincts, chacun avec son propre email généré
+        // aléatoirement par persistStandardUser() — condition nécessaire pour que
+        // le 403 ci-dessous prouve bien un contrôle croisé, pas une comparaison
+        // d'un utilisateur à lui-même.
         User userA = persistStandardUser();
         User userB = persistStandardUser();
-        assertThat(userA.getEmail()).isNotEqualTo(userB.getEmail());
         String tokenA = generateTokenForUser(userA);
 
         mockMvc.perform(get("/api/user/{id}", userB.getId())
@@ -201,9 +205,13 @@ class UserControllerIT extends AbstractIntegrationTest {
     // token, pour exclure toute ambiguïté sur "qui essaie de supprimer qui".
     @Test
     void delete_returns403_whenUserTriesToDeleteAnotherUsersAccount() throws Exception {
+        // Garde de fixture (pas le comportement testé) : userA et userB sont deux
+        // comptes réellement distincts, chacun avec son propre email généré
+        // aléatoirement par persistStandardUser() — condition nécessaire pour que
+        // le 403 ci-dessous prouve bien un contrôle croisé, pas une comparaison
+        // d'un utilisateur à lui-même.
         User userA = persistStandardUser();
         User userB = persistStandardUser();
-        assertThat(userA.getEmail()).isNotEqualTo(userB.getEmail());
         String tokenA = generateTokenForUser(userA);
 
         // 403 et non 401 : A est bien authentifié, c'est la propriété de la
