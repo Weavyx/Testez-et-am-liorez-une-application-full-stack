@@ -44,7 +44,7 @@ class AuthTokenFilterTest {
     }
 
     @Test
-    void should_logErrorAndContinueChain_when_userDetailsServiceThrows() throws Exception {
+    void should_continueChainWithNullAuthentication_when_userDetailsServiceThrows() throws Exception {
         when(request.getHeader("Authorization")).thenReturn("Bearer valid-token");
         when(jwtUtils.validateJwtToken("valid-token")).thenReturn(true);
         when(jwtUtils.getUserNameFromJwtToken("valid-token")).thenReturn("unknown@studio.com");

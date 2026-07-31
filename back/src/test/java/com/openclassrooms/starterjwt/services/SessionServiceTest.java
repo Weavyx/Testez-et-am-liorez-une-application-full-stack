@@ -127,7 +127,7 @@ class SessionServiceTest {
     }
 
     @Test
-    void should_returnNull_when_getByIdIsCalled_and_sessionDoesNotExist() {
+    void should_throwNotFoundException_when_getByIdIsCalled_and_sessionDoesNotExist() {
         when(sessionRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> sessionService.getById(99L))

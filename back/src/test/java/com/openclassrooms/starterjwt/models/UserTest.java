@@ -150,25 +150,25 @@ class UserTest {
     }
 
     @Test
-    void should_throwNullPointerException_when_builderBuildIsCalled_and_emailIsNull() {
+    void should_throwNullPointerException_when_builderFieldIsSetToNull_and_emailIsNull() {
         assertThatNullPointerException()
                 .isThrownBy(() -> User.builder().email(null));
     }
 
     @Test
-    void should_throwNullPointerException_when_builderBuildIsCalled_and_lastNameIsNull() {
+    void should_throwNullPointerException_when_builderFieldIsSetToNull_and_lastNameIsNull() {
         assertThatNullPointerException()
                 .isThrownBy(() -> User.builder().lastName(null));
     }
 
     @Test
-    void should_throwNullPointerException_when_builderBuildIsCalled_and_firstNameIsNull() {
+    void should_throwNullPointerException_when_builderFieldIsSetToNull_and_firstNameIsNull() {
         assertThatNullPointerException()
                 .isThrownBy(() -> User.builder().firstName(null));
     }
 
     @Test
-    void should_throwNullPointerException_when_builderBuildIsCalled_and_passwordIsNull() {
+    void should_throwNullPointerException_when_builderFieldIsSetToNull_and_passwordIsNull() {
         assertThatNullPointerException()
                 .isThrownBy(() -> User.builder().password(null));
     }

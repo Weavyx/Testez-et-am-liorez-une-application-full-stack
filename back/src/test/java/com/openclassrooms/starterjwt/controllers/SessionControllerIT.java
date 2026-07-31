@@ -76,8 +76,12 @@ class SessionControllerIT extends AbstractIntegrationTest {
     }
 
     private Session persistSession(Teacher teacher) {
+        return persistSession(teacher, "Hatha Yoga");
+    }
+
+    private Session persistSession(Teacher teacher, String name) {
         return sessionRepository.save(Session.builder()
-                .name("Hatha Yoga")
+                .name(name)
                 .date(new Date())
                 .description("Séance découverte")
                 .teacher(teacher)
@@ -165,8 +169,8 @@ class SessionControllerIT extends AbstractIntegrationTest {
 
     @Test
     void findAll_returns200AndAllSessions_whenAuthenticated() throws Exception {
-        Session session1 = persistSession(persistTeacher());
-        Session session2 = persistSession(persistTeacher());
+        Session session1 = persistSession(persistTeacher(), "Hatha Yoga");
+        Session session2 = persistSession(persistTeacher(), "Vinyasa Flow");
         String token = generateStandardUserToken();
 
         mockMvc.perform(get("/api/session")
@@ -175,7 +179,7 @@ class SessionControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$", hasSize(2)))
                 .andExpect(jsonPath("$[*].id", containsInAnyOrder(
                         session1.getId().intValue(), session2.getId().intValue())))
-                .andExpect(jsonPath("$[*].name", containsInAnyOrder("Hatha Yoga", "Hatha Yoga")));
+                .andExpect(jsonPath("$[*].name", containsInAnyOrder("Hatha Yoga", "Vinyasa Flow")));
     }
 
     @Test
@@ -352,6 +356,8 @@ class SessionControllerIT extends AbstractIntegrationTest {
         mockMvc.perform(delete("/api/session/{id}", session.getId())
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk());
+
+        assertThat(sessionRepository.existsById(session.getId())).isFalse();
     }
 
     // Preuve du fix : un utilisateur authentifié mais non-admin ne peut pas supprimer de session.
