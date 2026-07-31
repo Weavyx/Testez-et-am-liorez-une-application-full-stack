@@ -88,6 +88,11 @@ class UserServiceTest {
         // Garde-fou de la bascule email -> id : l'appelant porte le MÊME email que
         // la cible mais un id différent. L'ancienne comparaison par email aurait
         // autorisé la suppression ; la comparaison par id la refuse.
+        // Le helper authenticateAs(Long) ne convient pas ici : il force
+        // username = "user" + id + "@studio.com", ce qui ne peut jamais produire le
+        // même email que la cible ("owner@studio.com") pour un id différent — or
+        // c'est précisément cette collision d'email qu'il faut simuler. D'où la
+        // reconstruction manuelle du SecurityContextHolder ci-dessous.
         UserDetailsImpl intruder = UserDetailsImpl.builder().id(2L).username("owner@studio.com").build();
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(intruder, null, intruder.getAuthorities()));

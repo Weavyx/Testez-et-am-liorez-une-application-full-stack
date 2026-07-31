@@ -176,6 +176,8 @@ class SessionControllerIT extends AbstractIntegrationTest {
         mockMvc.perform(get("/api/session")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
+                // hasSize(2) suppose la table vide en entrée de test : vrai ici grâce au
+                // rollback @Transactional entre tests (aucun data.sql sous src/test/resources).
                 .andExpect(jsonPath("$", hasSize(2)))
                 .andExpect(jsonPath("$[*].id", containsInAnyOrder(
                         session1.getId().intValue(), session2.getId().intValue())))
@@ -557,11 +559,7 @@ class SessionControllerIT extends AbstractIntegrationTest {
     // P1-04 : même mécanisme que participate_returns400_whenIdIsNotNumeric.
     @Test
     void noLongerParticipate_returns400_whenIdIsNotNumeric() throws Exception {
-        Teacher teacher = persistTeacher();
-        Session session = persistSession(teacher);
         User participant = persistParticipant();
-        session.getUsers().add(participant);
-        sessionRepository.save(session);
         String token = generateTokenForUser(participant);
 
         mockMvc.perform(delete("/api/session/{id}/participate/{userId}", "abc", participant.getId())
