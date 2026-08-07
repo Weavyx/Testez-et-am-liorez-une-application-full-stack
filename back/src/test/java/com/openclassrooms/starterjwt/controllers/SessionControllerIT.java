@@ -146,7 +146,7 @@ class SessionControllerIT extends AbstractIntegrationTest {
 
     @Test
     @WithMockUser
-    void findById_returns200AndSession_whenSessionExists() throws Exception {
+    void findById_returns200AndSession() throws Exception {
         Teacher teacher = persistTeacher();
         Session session = persistSession(teacher);
 
@@ -189,7 +189,7 @@ class SessionControllerIT extends AbstractIntegrationTest {
 
     @Test
     @WithMockUser
-    void findAll_returns200AndAllSessions_whenAuthenticated() throws Exception {
+    void findAll_returns200AndAllSessions() throws Exception {
         Session session1 = persistSession(persistTeacher(), "Hatha Yoga");
         Session session2 = persistSession(persistTeacher(), "Vinyasa Flow");
 
