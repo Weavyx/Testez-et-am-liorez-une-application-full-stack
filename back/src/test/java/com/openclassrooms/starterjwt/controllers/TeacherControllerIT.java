@@ -44,7 +44,7 @@ class TeacherControllerIT extends AbstractIntegrationTest {
 
     @Test
     @WithMockUser
-    void findById_returns200AndTeacher_whenTeacherExists() throws Exception {
+    void findById_returns200AndTeacher() throws Exception {
         Teacher teacher = teacherRepository.save(Teacher.builder()
                 .firstName("Margot")
                 .lastName("Delahaye")
@@ -86,7 +86,7 @@ class TeacherControllerIT extends AbstractIntegrationTest {
 
     @Test
     @WithMockUser
-    void findAll_returns200AndAllTeachers_whenAuthenticated() throws Exception {
+    void findAll_returns200AndAllTeachers() throws Exception {
         Teacher teacher1 = teacherRepository.save(Teacher.builder()
                 .firstName("Margot")
                 .lastName("Delahaye")
