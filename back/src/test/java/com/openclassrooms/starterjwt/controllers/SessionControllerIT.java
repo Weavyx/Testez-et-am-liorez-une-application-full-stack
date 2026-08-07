@@ -8,11 +8,14 @@ import com.openclassrooms.starterjwt.repository.SessionRepository;
 import com.openclassrooms.starterjwt.repository.TeacherRepository;
 import com.openclassrooms.starterjwt.repository.UserRepository;
 import com.openclassrooms.starterjwt.security.services.UserDetailsImpl;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.Query;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -83,6 +86,12 @@ class SessionControllerIT extends AbstractIntegrationTest {
 
     @PersistenceContext
     private EntityManager entityManager;
+
+    // Même secret que JwtUtils (profil test, voir application-test.yml), pour
+    // fabriquer un token expiré signé "correctement" mais avec une expiration
+    // passée — voir findAll_returns401_whenTokenIsExpired.
+    @Value("${oc.app.jwtSecret}")
+    private String jwtSecret;
 
     private Teacher persistTeacher() {
         return teacherRepository.save(Teacher.builder()
@@ -197,6 +206,38 @@ class SessionControllerIT extends AbstractIntegrationTest {
     @Test
     void findAll_returns401_whenNotAuthenticated() throws Exception {
         mockMvc.perform(get("/api/session"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // Trou de couverture identifié dans AUDIT_AUTH_WITHMOCKUSER.md : aucun test
+    // d'intégration n'exerçait un token présent mais invalide contre un vrai
+    // endpoint protégé (seulement en unitaire, JwtUtilsTest/AuthTokenFilterTest).
+    // Ici, AuthTokenFilter.validateJwtToken(...) échoue réellement (MalformedJwtException),
+    // aucune authentication n'est posée dans le SecurityContext, et la requête est
+    // rejetée par le vrai authenticationEntryPoint, comme pour findAll_returns401_whenNotAuthenticated.
+    @Test
+    void findAll_returns401_whenTokenIsMalformed() throws Exception {
+        mockMvc.perform(get("/api/session")
+                        .header("Authorization", "Bearer not-a-valid-jwt"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // Même trou de couverture, cas du token expiré : signé avec le même secret que
+    // celui utilisé par JwtUtils en profil test (application-test.yml) mais avec une
+    // expiration déjà passée, pour que la vraie validation cryptographique
+    // (JwtUtils.validateJwtToken) échoue sur ExpiredJwtException, pas sur une
+    // signature invalide.
+    @Test
+    void findAll_returns401_whenTokenIsExpired() throws Exception {
+        String expiredToken = Jwts.builder()
+                .setSubject("expired-user@test.com")
+                .setIssuedAt(new Date(System.currentTimeMillis() - 20_000))
+                .setExpiration(new Date(System.currentTimeMillis() - 10_000))
+                .signWith(SignatureAlgorithm.HS512, jwtSecret)
+                .compact();
+
+        mockMvc.perform(get("/api/session")
+                        .header("Authorization", "Bearer " + expiredToken))
                 .andExpect(status().isUnauthorized());
     }
 
