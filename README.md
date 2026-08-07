@@ -150,29 +150,30 @@ npm run e2e:coverage-run     # enchaîne e2e:ci puis e2e:coverage
 
 ## Couverture atteinte
 
-### Backend — JaCoCo (`mvn clean verify`, exécution du 2026-07-31)
+### Backend — JaCoCo (`mvn clean verify`, exécution du 2026-08-07)
 
 Le gate `jacoco-check` du `pom.xml` vérifie, par package, LINE ≥ 90 %, INSTRUCTION ≥ 80 %
 et BRANCH ≥ 80 %.
 
 | Package | Instructions % | Branches % | Lignes % | Statut |
 |---|---|---|---|---|
-| security.services | 92,9 % | 100,0 % | 100,0 % | ✅ |
-| services | 100,0 % | 100,0 % | 100,0 % | ✅ |
-| security | 100,0 % | n/a (0 branche) | 100,0 % | ✅ |
-| security.jwt | 100,0 % | 100,0 % | 100,0 % | ✅ |
-| models | 96,3 % | 86,5 % | 100,0 % | ✅ |
-| exception | 100,0 % | 100,0 % | 100,0 % | ✅ |
-| controllers | 100,0 % | n/a (0 branche) | 100,0 % | ✅ |
-| configuration | 100,0 % | n/a (0 branche) | 100,0 % | ✅ |
-| **Global (périmètre `jacoco-check`)** | **97,7 % (1994/2040)** | **92,1 % (116/126)** | **100,0 % (297/297)** | ✅ |
+| security.jwt | 100,00 % | 100,00 % | 100,00 % | ✅ |
+| models | 96,26 % | 86,49 % | 100,00 % | ✅ |
+| security.services | 92,89 % | 100,00 % | 100,00 % | ✅ |
+| exception | 100,00 % | 100,00 % | 100,00 % | ✅ |
+| controllers | 100,00 % | n/a (0 branche) | 100,00 % | ✅ |
+| services | 100,00 % | 100,00 % | 100,00 % | ✅ |
+| configuration | 100,00 % | n/a (0 branche) | 100,00 % | ✅ |
+| security (WebSecurityConfig) | 100,00 % | n/a (0 branche) | 100,00 % | ✅ |
+| **Global** | **97,77 % (2020/2066)** | **92,06 % (116/126)** | **100,00 % (305/305)** | ✅ |
 
-170 tests exécutés, 0 échec. `[INFO] All coverage checks have been met.` / `BUILD SUCCESS`.
+180 tests exécutés, 0 échec. `[INFO] All coverage checks have been met.` / `BUILD SUCCESS`.
+Ratio de tests d'intégration : 65/180 = 36,11 % (seuil ≥ 30 % respecté).
 Périmètre hors `dto/`, `mapper/`, `payload/request/`, `payload/response/` et la classe de
 bootstrap (exclusions explicites du build).
 
-Chiffres front et e2e ci-dessous issus de la dernière mesure documentée dans
-`AUDIT_PHASE5_COUVERTURE_FINALE.md` (exécution du 2026-07-26).
+Chiffres front et e2e ci-dessous confirmés à l'identique lors de la revérification du
+2026-08-07 (voir AUDIT_METRIQUES_FINALES.md).
 
 ### Frontend — Jest
 
