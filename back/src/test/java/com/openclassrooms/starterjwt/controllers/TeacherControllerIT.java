@@ -6,6 +6,7 @@ import com.openclassrooms.starterjwt.repository.TeacherRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,16 +20,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Tests d'intégration de TeacherController : vraie base MySQL (Testcontainers)
  * via AbstractIntegrationTest, requêtes passées par MockMvc.
  *
- * Authentification : un vrai token JWT est généré via
- * AbstractIntegrationTest.generateStandardUserToken() pour un utilisateur
- * réellement inséré en base, et envoyé en en-tête Authorization. Ce choix
- * (plutôt que @WithMockUser) fait passer chaque requête par le vrai
- * AuthTokenFilter (parsing + validation du JWT, puis chargement de
- * l'utilisateur via UserDetailsServiceImpl), ce qui valide la chaîne de
- * sécurité de bout en bout et non un SecurityContext injecté artificiellement.
- * Cette approche est conservée pour les prochains controllers d'intégration
- * (notamment AuthController, où un JWT réel est incontournable) afin de
- * rester cohérent.
+ * Authentification : les tests de logique métier utilisent @WithMockUser
+ * (voir AUDIT_AUTH_WITHMOCKUSER.md) — ces endpoints ne testent pas le
+ * parcours JWT lui-même, seulement l'accès à une ressource pour un
+ * utilisateur authentifié. Le test findById_returns401_whenNotAuthenticated
+ * / findAll_returns401_whenNotAuthenticated reste sans authentification pour
+ * continuer à couvrir le rejet réel par AuthTokenFilter/authenticationEntryPoint
+ * en l'absence de token.
  *
  * Isolation : @Transactional fait rollback la transaction ouverte par chaque
  * test à la fin de celui-ci, donc les données insérées (teacher, user) ne
@@ -45,15 +43,14 @@ class TeacherControllerIT extends AbstractIntegrationTest {
     private TeacherRepository teacherRepository;
 
     @Test
+    @WithMockUser
     void findById_returns200AndTeacher_whenTeacherExists() throws Exception {
         Teacher teacher = teacherRepository.save(Teacher.builder()
                 .firstName("Margot")
                 .lastName("Delahaye")
                 .build());
-        String token = generateStandardUserToken();
 
-        mockMvc.perform(get("/api/teacher/{id}", teacher.getId())
-                        .header("Authorization", "Bearer " + token))
+        mockMvc.perform(get("/api/teacher/{id}", teacher.getId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(teacher.getId()))
                 .andExpect(jsonPath("$.firstName").value("Margot"))
@@ -63,20 +60,16 @@ class TeacherControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
+    @WithMockUser
     void findById_returns404_whenTeacherDoesNotExist() throws Exception {
-        String token = generateStandardUserToken();
-
-        mockMvc.perform(get("/api/teacher/{id}", 999999L)
-                        .header("Authorization", "Bearer " + token))
+        mockMvc.perform(get("/api/teacher/{id}", 999999L))
                 .andExpect(status().isNotFound());
     }
 
     @Test
+    @WithMockUser
     void findById_returns400_whenIdIsNotNumeric() throws Exception {
-        String token = generateStandardUserToken();
-
-        mockMvc.perform(get("/api/teacher/{id}", "abc")
-                        .header("Authorization", "Bearer " + token))
+        mockMvc.perform(get("/api/teacher/{id}", "abc"))
                 .andExpect(status().isBadRequest());
     }
 
@@ -92,6 +85,7 @@ class TeacherControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
+    @WithMockUser
     void findAll_returns200AndAllTeachers_whenAuthenticated() throws Exception {
         Teacher teacher1 = teacherRepository.save(Teacher.builder()
                 .firstName("Margot")
@@ -101,10 +95,8 @@ class TeacherControllerIT extends AbstractIntegrationTest {
                 .firstName("Hélène")
                 .lastName("Thiercelin")
                 .build());
-        String token = generateStandardUserToken();
 
-        mockMvc.perform(get("/api/teacher")
-                        .header("Authorization", "Bearer " + token))
+        mockMvc.perform(get("/api/teacher"))
                 .andExpect(status().isOk())
                 // hasSize(2) suppose la table vide en entrée de test : vrai ici grâce au
                 // rollback @Transactional entre tests (aucun data.sql sous src/test/resources).
