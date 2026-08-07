@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(NumberFormatException.class)
-    public ResponseEntity<?> handleNumberFormatException(NumberFormatException e) {
+    public ResponseEntity<Void> handleNumberFormatException(NumberFormatException e) {
         return ResponseEntity.badRequest().build();
     }
 
@@ -26,17 +26,17 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(NotFoundException.class)
-    public ResponseEntity<?> handleNotFoundException(NotFoundException e) {
+    public ResponseEntity<Void> handleNotFoundException(NotFoundException e) {
         return ResponseEntity.notFound().build();
     }
 
     @ExceptionHandler(ForbiddenException.class)
-    public ResponseEntity<?> handleForbiddenException(ForbiddenException e) {
+    public ResponseEntity<Void> handleForbiddenException(ForbiddenException e) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<?> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
+    public ResponseEntity<MessageResponse> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
         String message = e.getBindingResult().getFieldErrors().stream()
                 .map(fieldError -> fieldError.getField() + " " + fieldError.getDefaultMessage())
                 .collect(Collectors.joining("; ", "Error: ", ""));
