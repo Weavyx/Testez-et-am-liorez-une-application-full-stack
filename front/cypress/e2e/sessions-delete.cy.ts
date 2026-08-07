@@ -51,7 +51,7 @@ describe('Session delete spec', () => {
       cy.wait('@loginRequest')
       cy.wait('@sessionsRequest')
 
-      cy.contains('.item', session.name).within(() => {
+      cy.contains('[data-cy=session-item]', session.name).within(() => {
         cy.contains('button', 'Detail').click()
       })
 
@@ -109,7 +109,7 @@ describe('Session delete spec', () => {
         cy.get('button[type=submit]').click()
 
         cy.url().should('include', '/sessions')
-        cy.contains('.item', sessionName).within(() => {
+        cy.contains('[data-cy=session-item]', sessionName).within(() => {
           cy.contains('button', 'Detail').click()
         })
 
@@ -117,7 +117,7 @@ describe('Session delete spec', () => {
         cy.contains('button', 'Delete').should('be.visible').click()
 
         cy.url().should('match', /\/sessions$/)
-        cy.contains('.item', sessionName).should('not.exist')
+        cy.contains('[data-cy=session-item]', sessionName).should('not.exist')
       })
     })
   })
@@ -144,7 +144,7 @@ describe('Session delete spec', () => {
       cy.wait('@loginRequest')
       cy.wait('@sessionsRequest')
 
-      cy.contains('.item', session.name).within(() => {
+      cy.contains('[data-cy=session-item]', session.name).within(() => {
         cy.contains('button', 'Detail').click()
       })
 

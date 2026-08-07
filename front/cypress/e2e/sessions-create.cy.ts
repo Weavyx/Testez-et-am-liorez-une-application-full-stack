@@ -161,7 +161,7 @@ describe('Session create spec', () => {
     cy.get('button[type=submit]').should('not.be.disabled').click()
 
     cy.url().should('match', /\/sessions$/)
-    cy.contains('.item', sessionName).should('be.visible')
+    cy.contains('[data-cy=session-item]', sessionName).should('be.visible')
 
     // Cleanup : aucun id disponible côté front (création faite via l'UI, pas via cy.request) ;
     // on retrouve l'id réel via GET /api/session en filtrant sur le nom unique horodaté.
