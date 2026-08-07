@@ -133,8 +133,8 @@ describe('ListComponent', () => {
       req.flush(mockSessions);
       fixture.detectChanges();
 
-      const detailButton = Array.from(fixture.nativeElement.querySelectorAll('button'))
-        .find((btn: any) => btn.textContent?.includes('Detail'));
+      const detailButton = Array.from<HTMLButtonElement>(fixture.nativeElement.querySelectorAll('button'))
+        .find((btn) => btn.textContent?.includes('Detail'));
       expect(detailButton).toBeDefined();
     });
   });
