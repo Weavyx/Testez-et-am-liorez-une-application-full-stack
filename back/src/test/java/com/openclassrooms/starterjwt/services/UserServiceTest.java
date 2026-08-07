@@ -157,7 +157,7 @@ class UserServiceTest {
     }
 
     @Test
-    void should_returnUser_when_findByIdIsCalled_and_userExists() {
+    void should_returnUser_when_findByIdIsCalled() {
         User user = User.builder().id(1L).email("yoga@studio.com").firstName("Jean").lastName("Dupont")
                 .password("encodedPassword").admin(true).build();
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
@@ -293,7 +293,7 @@ class UserServiceTest {
     }
 
     @Test
-    void should_saveUserWithEncodedPassword_when_registerIsCalled_and_emailIsNotTaken() {
+    void should_saveUserWithEncodedPassword_when_registerIsCalled() {
         when(userRepository.existsByEmail("new@studio.com")).thenReturn(false);
         when(passwordEncoder.encode("rawPassword")).thenReturn("encodedPassword");
 
