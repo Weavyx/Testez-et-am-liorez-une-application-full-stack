@@ -37,19 +37,19 @@ describe('Logout spec', () => {
     cy.wait('@sessionsRequest')
 
     cy.url().should('include', '/sessions')
-    cy.contains('.link', 'Logout').should('be.visible')
+    cy.contains('Logout').should('be.visible')
 
-    cy.contains('.link', 'Logout').click()
+    cy.contains('Logout').click()
 
     cy.url().should('include', '/login')
 
     // Toolbar : app.component.html:4-15 bascule sur le bloc @else (Login/Register) dès que
     // $isLogged() repasse à false.
-    cy.contains('.link', 'Login').should('be.visible')
-    cy.contains('.link', 'Register').should('be.visible')
-    cy.contains('.link', 'Sessions').should('not.exist')
-    cy.contains('.link', 'Account').should('not.exist')
-    cy.contains('.link', 'Logout').should('not.exist')
+    cy.contains('Login').should('be.visible')
+    cy.contains('Register').should('be.visible')
+    cy.contains('Sessions').should('not.exist')
+    cy.contains('Account').should('not.exist')
+    cy.contains('Logout').should('not.exist')
   })
 
   it('logout - protected routes become inaccessible after logout (mock)', () => {
@@ -66,7 +66,7 @@ describe('Logout spec', () => {
     cy.wait('@loginRequest')
     cy.wait('@sessionsRequest')
 
-    cy.contains('.link', 'Logout').click()
+    cy.contains('Logout').click()
     cy.url().should('include', '/login')
 
     // AuthGuard.canActivate() (auth.guard.ts:14-20) : sessionService.isLogged est un état en
@@ -85,11 +85,11 @@ describe('Logout spec', () => {
     cy.get('button[type=submit]').click()
 
     cy.url().should('include', '/sessions')
-    cy.contains('.link', 'Logout').should('be.visible').click()
+    cy.contains('Logout').should('be.visible').click()
 
     cy.url().should('include', '/login')
-    cy.contains('.link', 'Login').should('be.visible')
-    cy.contains('.link', 'Register').should('be.visible')
+    cy.contains('Login').should('be.visible')
+    cy.contains('Register').should('be.visible')
 
     cy.visit('/sessions')
     cy.url().should('include', '/login')

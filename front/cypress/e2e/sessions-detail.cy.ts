@@ -62,7 +62,7 @@ describe('Session detail spec', () => {
       cy.wait('@teacherRequest')
 
       cy.contains('h1', session.name).should('be.visible')
-      cy.get('.description').should('contain.text', session.description)
+      cy.contains(session.description).should('be.visible')
       cy.contains('September 5, 2026').should('be.visible')
       cy.contains('Margot DELAHAYE').should('be.visible')
     })

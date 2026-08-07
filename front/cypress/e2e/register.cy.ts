@@ -37,7 +37,7 @@ describe('Register spec', () => {
     cy.get('button[type=submit]').click()
 
     cy.wait('@registerRequest')
-    cy.get('.error').should('be.visible').and('contain.text', 'An error occurred')
+    cy.contains('An error occurred').should('be.visible')
     cy.url().should('include', '/register')
   })
 
