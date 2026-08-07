@@ -12,6 +12,7 @@ import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -125,20 +126,16 @@ class UserControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
+    @WithMockUser
     void findById_returns404_whenUserDoesNotExist() throws Exception {
-        String token = generateStandardUserToken();
-
-        mockMvc.perform(get("/api/user/{id}", 999999L)
-                        .header("Authorization", "Bearer " + token))
+        mockMvc.perform(get("/api/user/{id}", 999999L))
                 .andExpect(status().isNotFound());
     }
 
     @Test
+    @WithMockUser
     void findById_returns400_whenIdIsNotNumeric() throws Exception {
-        String token = generateStandardUserToken();
-
-        mockMvc.perform(get("/api/user/{id}", "abc")
-                        .header("Authorization", "Bearer " + token))
+        mockMvc.perform(get("/api/user/{id}", "abc"))
                 .andExpect(status().isBadRequest());
     }
 
@@ -226,20 +223,16 @@ class UserControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
+    @WithMockUser
     void delete_returns404_whenUserDoesNotExist() throws Exception {
-        String token = generateStandardUserToken();
-
-        mockMvc.perform(delete("/api/user/{id}", 999999L)
-                        .header("Authorization", "Bearer " + token))
+        mockMvc.perform(delete("/api/user/{id}", 999999L))
                 .andExpect(status().isNotFound());
     }
 
     @Test
+    @WithMockUser
     void delete_returns400_whenIdIsNotNumeric() throws Exception {
-        String token = generateStandardUserToken();
-
-        mockMvc.perform(delete("/api/user/{id}", "abc")
-                        .header("Authorization", "Bearer " + token))
+        mockMvc.perform(delete("/api/user/{id}", "abc"))
                 .andExpect(status().isBadRequest());
     }
 
