@@ -87,7 +87,7 @@ describe('LoginComponent', () => {
       expect(component).toBeTruthy();
     });
 
-    it('should log in and navigate to /sessions on successful submit', () => {
+    it('should log in and navigate to /sessions on submit', () => {
       const sessionInfo: SessionInformation = {
         token: 'token',
         type: 'Bearer',
