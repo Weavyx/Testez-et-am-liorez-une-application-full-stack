@@ -231,8 +231,9 @@ front/
 
 La démarche qualité menée sur ce projet va au-delà du minimum demandé : `METHODE_AUDIT.md`
 décrit la méthode d'audit suivie, `DETTE_ET_SUIVI.md` trace la dette technique identifiée
-et son traitement, et les fichiers `AUDIT_*.md` à la racine documentent chaque phase
-d'analyse (inventaire, classement des tests, couverture, etc.).
+et son traitement, et les fichiers `AUDIT_*.md` sous `docs/audits/` documentent chaque phase
+d'analyse (inventaire, classement des tests, couverture, etc.) ; voir `docs/audits/README.md`
+comme point d'entrée pour naviguer dans ces audits.
 
 ## Ressources
 
