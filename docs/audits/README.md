@@ -27,6 +27,7 @@ Ces fichiers documentent la démarche d'audit menée après l'Exercice 2 (ainsi 
 
 [AUDIT_PHASE4_COMPORTEMENTS_TESTES.md](phase4-tests-fond/AUDIT_PHASE4_COMPORTEMENTS_TESTES.md) (26/07) mentionne 190 tests recensés en Phase 3, contre 180 dans [AUDIT_METRIQUES_FINALES.md](phase5-couverture/AUDIT_METRIQUES_FINALES.md) (07/08). Cet écart est normal : il résulte d'un regroupement/d'une simplification de tests entre les deux dates, et ne constitue pas une contradiction à investiguer.
 
-## Réserves de périmètre
+## Réserves
 
 - [AUDIT_STRUCTURE_TESTS_MECANIQUE.md](phase4-tests-fond/AUDIT_STRUCTURE_TESTS_MECANIQUE.md) couvre les tests existants au moment de sa rédaction ; le fichier `unauth.guard.spec.ts` (ajouté après, cf. [DETTE_ET_SUIVI.md](../../DETTE_ET_SUIVI.md) P10-01) n'a pas été inclus dans cet audit mécanique — sans risque connu, ce test a été validé au moment de sa création.
+- [AUDIT_TYPAGE_METHODES.md](ex1-conformite/AUDIT_TYPAGE_METHODES.md) — le constat (« 37 méthodes toutes typées explicitement ») a été revérifié par échantillon (spot-check sur `list.component.ts` et un guard), pas de façon exhaustive sur les 37 méthodes d'origine. Aucune régression connue par ailleurs (aucun autre audit ni aucune correction n'a signalé de `any` ou de méthode non typée depuis).
