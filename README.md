@@ -184,7 +184,7 @@ Chiffres front et e2e ci-dessous confirmés à l'identique lors de la revérific
 | Functions | 100 % | 80 % | ✅ |
 | Lines | 100 % | 80 % | ✅ |
 
-65 tests exécutés, 0 échec.
+68 tests exécutés, 0 échec.
 
 ### E2E — Cypress/nyc
 
