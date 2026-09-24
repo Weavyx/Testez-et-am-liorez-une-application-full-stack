@@ -49,7 +49,7 @@ describe('Session update spec', () => {
       cy.wait('@loginRequest')
       cy.wait('@sessionsRequest')
 
-      cy.contains('.item', session.name).within(() => {
+      cy.contains('[data-cy=session-item]', session.name).within(() => {
         cy.contains('button', 'Edit').click()
       })
 
@@ -99,7 +99,7 @@ describe('Session update spec', () => {
       cy.wait('@loginRequest')
       cy.wait('@sessionsRequest')
 
-      cy.contains('.item', session.name).within(() => {
+      cy.contains('[data-cy=session-item]', session.name).within(() => {
         cy.contains('button', 'Edit').click()
       })
 
@@ -139,7 +139,7 @@ describe('Session update spec', () => {
       cy.wait('@loginRequest')
       cy.wait('@sessionsRequest')
 
-      cy.contains('.item', session.name).within(() => {
+      cy.contains('[data-cy=session-item]', session.name).within(() => {
         cy.contains('button', 'Edit').click()
       })
 
@@ -202,7 +202,7 @@ describe('Session update spec', () => {
         cy.get('button[type=submit]').click()
 
         cy.url().should('include', '/sessions')
-        cy.contains('.item', initialName).within(() => {
+        cy.contains('[data-cy=session-item]', initialName).within(() => {
           cy.contains('button', 'Edit').click()
         })
 
@@ -223,7 +223,7 @@ describe('Session update spec', () => {
         cy.get('button[type=submit]').should('not.be.disabled').click()
 
         cy.url().should('match', /\/sessions$/)
-        cy.contains('.item', updatedName).should('be.visible')
+        cy.contains('[data-cy=session-item]', updatedName).should('be.visible')
       })
     })
   })

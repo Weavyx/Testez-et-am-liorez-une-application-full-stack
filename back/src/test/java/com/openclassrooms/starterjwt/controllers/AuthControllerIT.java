@@ -86,7 +86,7 @@ class AuthControllerIT extends AbstractIntegrationTest {
     // ---------- POST /api/auth/register ----------
 
     @Test
-    void register_returns200AndSuccessMessage_whenDataIsValid() throws Exception {
+    void register_returns200AndSuccessMessage() throws Exception {
         String email = uniqueEmail("new-user");
 
         mockMvc.perform(post("/api/auth/register")
@@ -156,7 +156,7 @@ class AuthControllerIT extends AbstractIntegrationTest {
     // ---------- POST /api/auth/login ----------
 
     @Test
-    void login_returns200AndJwtResponse_whenCredentialsAreValid() throws Exception {
+    void login_returns200AndJwtResponse() throws Exception {
         String email = uniqueEmail("login-user");
         User user = persistUser(email, "password123", false);
 

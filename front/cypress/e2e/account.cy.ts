@@ -68,7 +68,7 @@ describe('Account spec', () => {
     cy.fixture('user-account.json').then((user) => {
       cy.intercept('GET', `/api/user/${user.id}`, user).as('userRequest')
 
-      cy.contains('.link', 'Account').click()
+      cy.contains('Account').click()
       cy.wait('@userRequest')
 
       cy.url().should('include', '/me')
@@ -100,7 +100,7 @@ describe('Account spec', () => {
       const adminUser = { ...user, id: 1, admin: true }
       cy.intercept('GET', '/api/user/1', adminUser).as('userRequest')
 
-      cy.contains('.link', 'Account').click()
+      cy.contains('Account').click()
       cy.wait('@userRequest')
 
       // me.component.html:16-18 / :19-27 : blocs mutuellement exclusifs sur user.admin.
@@ -127,7 +127,7 @@ describe('Account spec', () => {
     cy.fixture('user-account.json').then((user) => {
       cy.intercept('GET', `/api/user/${user.id}`, user).as('userRequest')
 
-      cy.contains('.link', 'Account').click()
+      cy.contains('Account').click()
       cy.wait('@userRequest')
 
       cy.intercept('DELETE', `/api/user/${user.id}`, {
@@ -145,8 +145,8 @@ describe('Account spec', () => {
       cy.url().should('include', '/login')
 
       // Preuve que logOut() a bien été appliqué : la toolbar repasse à l'état "non connecté".
-      cy.contains('.link', 'Login').should('be.visible')
-      cy.contains('.link', 'Account').should('not.exist')
+      cy.contains('Login').should('be.visible')
+      cy.contains('Account').should('not.exist')
     })
   })
 
@@ -171,7 +171,7 @@ describe('Account spec', () => {
 
     cy.url().should('include', '/sessions')
 
-    cy.contains('.link', 'Account').click()
+    cy.contains('Account').click()
     cy.url().should('include', '/me')
 
     // Données réelles renvoyées par GET /api/user/{id}, correspondant à ce qui a été fourni au

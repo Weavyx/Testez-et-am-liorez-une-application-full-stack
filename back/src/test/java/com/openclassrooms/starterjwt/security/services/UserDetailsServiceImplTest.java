@@ -26,7 +26,7 @@ class UserDetailsServiceImplTest {
     private UserDetailsServiceImpl userDetailsService;
 
     @Test
-    void should_returnUserDetails_when_loadUserByUsernameIsCalled_and_userExists() {
+    void should_returnUserDetails_when_loadUserByUsernameIsCalled() {
         User user = User.builder()
                 .id(1L)
                 .email("yoga@studio.com")

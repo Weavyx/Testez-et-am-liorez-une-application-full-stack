@@ -65,7 +65,7 @@ class JwtUtilsTest {
     }
 
     @Test
-    void should_returnTrue_when_validateJwtTokenIsCalled_with_validToken() {
+    void should_returnTrue_when_validateJwtTokenIsCalled() {
         String token = jwtUtils.generateJwtToken(authenticationFor("yoga@studio.com"));
 
         assertThat(jwtUtils.validateJwtToken(token)).isTrue();

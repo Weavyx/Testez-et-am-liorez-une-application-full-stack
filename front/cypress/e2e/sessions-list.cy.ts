@@ -33,7 +33,7 @@ describe('Sessions list spec', () => {
 
     // Pas de crash : la page reste utilisable et aucune carte fantome n'est affichee.
     cy.contains('mat-card-title', 'Rentals available').should('be.visible')
-    cy.get('.item').should('have.length', 0)
+    cy.get('[data-cy=session-item]').should('have.length', 0)
   })
 
   it('sessions list - displays sessions (mock)', () => {
@@ -51,9 +51,9 @@ describe('Sessions list spec', () => {
     cy.wait('@sessionsRequest')
 
     cy.fixture('sessions-list.json').then((sessions: Array<{ name: string }>) => {
-      cy.get('.item').should('have.length', sessions.length)
+      cy.get('[data-cy=session-item]').should('have.length', sessions.length)
       sessions.forEach((session) => {
-        cy.contains('.item', session.name).should('be.visible')
+        cy.contains('[data-cy=session-item]', session.name).should('be.visible')
       })
     })
   })
@@ -73,7 +73,7 @@ describe('Sessions list spec', () => {
     cy.wait('@sessionsRequest')
 
     cy.contains('button', 'Create').should('be.visible')
-    cy.get('.item').first().contains('button', 'Edit').should('be.visible')
+    cy.get('[data-cy=session-item]').first().contains('button', 'Edit').should('be.visible')
   })
 
   it('sessions list - Create/Edit buttons hidden for non-admin (mock)', () => {
@@ -101,10 +101,10 @@ describe('Sessions list spec', () => {
     // Comportement volontaire (list.component.html:5 et :34) : Create et Edit sont bien
     // masques pour un non-admin, mais Detail (lignes 30-33, aucune condition) reste visible.
     cy.contains('button', 'Create').should('not.exist')
-    cy.get('.item').each(($item) => {
+    cy.get('[data-cy=session-item]').each(($item) => {
       cy.wrap($item).contains('button', 'Edit').should('not.exist')
     })
-    cy.get('.item').first().contains('button', 'Detail').should('be.visible')
+    cy.get('[data-cy=session-item]').first().contains('button', 'Detail').should('be.visible')
   })
 
   it('sessions list (real backend)', () => {
@@ -145,7 +145,7 @@ describe('Sessions list spec', () => {
           cy.get('button[type=submit]').click()
 
           cy.url().should('include', '/sessions')
-          cy.contains('.item', sessionName).should('be.visible')
+          cy.contains('[data-cy=session-item]', sessionName).should('be.visible')
         })
       })
     })

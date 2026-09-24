@@ -35,7 +35,7 @@ describe('Login spec', () => {
     cy.get('button[type=submit]').click()
 
     cy.wait('@loginRequest')
-    cy.get('.error').should('be.visible').and('contain.text', 'An error occurred')
+    cy.contains('An error occurred').should('be.visible')
     cy.url().should('include', '/login')
   })
 
@@ -73,6 +73,6 @@ describe('Login spec', () => {
 
     // Preuve que ce n'est pas un mock qui traîne : la toolbar reflète bien l'état "connecté"
     // (le lien Logout n'existe que dans la branche @if ($isLogged() | async) du template).
-    cy.contains('.link', 'Logout').should('be.visible')
+    cy.contains('Logout').should('be.visible')
   })
 })

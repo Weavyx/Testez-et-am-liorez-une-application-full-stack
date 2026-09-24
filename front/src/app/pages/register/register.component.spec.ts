@@ -94,7 +94,7 @@ describe('RegisterComponent', () => {
       expect(component).toBeTruthy();
     });
 
-    it('should register and navigate to /login on successful submit', () => {
+    it('should register and navigate to /login on submit', () => {
       jest.spyOn(authService, 'register').mockReturnValue(of(undefined));
       const navigateSpy = jest.spyOn(router, 'navigate');
 

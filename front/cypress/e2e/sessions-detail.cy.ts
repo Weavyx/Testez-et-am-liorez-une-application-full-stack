@@ -54,7 +54,7 @@ describe('Session detail spec', () => {
       cy.wait('@loginRequest')
       cy.wait('@sessionsRequest')
 
-      cy.contains('.item', session.name).within(() => {
+      cy.contains('[data-cy=session-item]', session.name).within(() => {
         cy.contains('button', 'Detail').click()
       })
 
@@ -62,7 +62,7 @@ describe('Session detail spec', () => {
       cy.wait('@teacherRequest')
 
       cy.contains('h1', session.name).should('be.visible')
-      cy.get('.description').should('contain.text', session.description)
+      cy.contains(session.description).should('be.visible')
       cy.contains('September 5, 2026').should('be.visible')
       cy.contains('Margot DELAHAYE').should('be.visible')
     })
@@ -86,7 +86,7 @@ describe('Session detail spec', () => {
       cy.wait('@loginRequest')
       cy.wait('@sessionsRequest')
 
-      cy.contains('.item', session.name).within(() => {
+      cy.contains('[data-cy=session-item]', session.name).within(() => {
         cy.contains('button', 'Detail').click()
       })
 
@@ -118,7 +118,7 @@ describe('Session detail spec', () => {
       cy.wait('@loginRequest')
       cy.wait('@sessionsRequest')
 
-      cy.contains('.item', session.name).within(() => {
+      cy.contains('[data-cy=session-item]', session.name).within(() => {
         cy.contains('button', 'Detail').click()
       })
 
@@ -152,7 +152,7 @@ describe('Session detail spec', () => {
       cy.wait('@loginRequest')
       cy.wait('@sessionsRequest')
 
-      cy.contains('.item', session.name).within(() => {
+      cy.contains('[data-cy=session-item]', session.name).within(() => {
         cy.contains('button', 'Detail').click()
       })
 
@@ -184,7 +184,7 @@ describe('Session detail spec', () => {
       cy.wait('@loginRequest')
       cy.wait('@sessionsRequest')
 
-      cy.contains('.item', session.name).within(() => {
+      cy.contains('[data-cy=session-item]', session.name).within(() => {
         cy.contains('button', 'Detail').click()
       })
 
@@ -248,7 +248,7 @@ describe('Session detail spec', () => {
         cy.get('button[type=submit]').click()
 
         cy.url().should('include', '/sessions')
-        cy.contains('.item', sessionName).within(() => {
+        cy.contains('[data-cy=session-item]', sessionName).within(() => {
           cy.contains('button', 'Detail').click()
         })
 
@@ -262,7 +262,7 @@ describe('Session detail spec', () => {
         cy.contains('button', 'Delete').should('be.visible').click()
 
         cy.url().should('match', /\/sessions$/)
-        cy.contains('.item', sessionName).should('not.exist')
+        cy.contains('[data-cy=session-item]', sessionName).should('not.exist')
       })
     })
   })

@@ -80,7 +80,7 @@ class SessionServiceTest {
     }
 
     @Test
-    void should_deleteSession_when_deleteIsCalled_and_sessionExists() {
+    void should_deleteSession_when_deleteIsCalled() {
         when(sessionRepository.existsById(1L)).thenReturn(true);
 
         sessionService.delete(1L);
@@ -118,7 +118,7 @@ class SessionServiceTest {
     }
 
     @Test
-    void should_returnSession_when_getByIdIsCalled_and_sessionExists() {
+    void should_returnSession_when_getByIdIsCalled() {
         Session session = Session.builder().id(1L).name("Yoga").build();
         when(sessionRepository.findById(1L)).thenReturn(Optional.of(session));
 
@@ -160,7 +160,7 @@ class SessionServiceTest {
     }
 
     @Test
-    void should_addUserToSession_when_participateIsCalled_and_notAlreadyParticipating() {
+    void should_addUserToSession_when_participateIsCalled() {
         User user = User.builder().id(10L).email("user@studio.com").lastName("Doe").firstName("John").password("pw").build();
         Session session = Session.builder().id(1L).name("Yoga").users(new ArrayList<>()).build();
         when(sessionRepository.findById(1L)).thenReturn(Optional.of(session));
@@ -223,7 +223,7 @@ class SessionServiceTest {
     }
 
     @Test
-    void should_removeUserFromSession_when_noLongerParticipateIsCalled_and_userIsParticipating() {
+    void should_removeUserFromSession_when_noLongerParticipateIsCalled() {
         User userToRemove = User.builder().id(10L).email("user@studio.com").lastName("Doe").firstName("John").password("pw").build();
         User userToKeep = User.builder().id(20L).email("other@studio.com").lastName("Smith").firstName("Jane").password("pw").build();
         List<User> users = new ArrayList<>();

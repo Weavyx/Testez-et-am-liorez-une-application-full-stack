@@ -11,7 +11,7 @@
     </mat-card-header>
     <div class="items mt2" fxLayout="row wrap" fxLayout.lt-md="column">
       @for (session of (sessions$ | async) ?? []; track session.id) {
-        <mat-card class="item" fxFlex>
+        <mat-card class="item" data-cy="session-item" fxFlex>
           <mat-card-header>
             <mat-card-title>{{ session.name }}</mat-card-title>
             <mat-card-subtitle>

@@ -50,7 +50,7 @@ class TeacherServiceTest {
     }
 
     @Test
-    void should_returnTeacher_when_findByIdIsCalled_and_teacherExists() {
+    void should_returnTeacher_when_findByIdIsCalled() {
         Teacher teacher = Teacher.builder().id(1L).firstName("Margot").lastName("Delahaye").build();
         when(teacherRepository.findById(1L)).thenReturn(Optional.of(teacher));
 
